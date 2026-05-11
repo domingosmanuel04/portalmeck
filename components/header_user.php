@@ -1,0 +1,298 @@
+<?php
+// components/header_user.php
+// Expected variables: $pdo, $_SESSION['user_id']
+
+if (!isset($currentUser)) {
+    try {
+        // Check if photo_url exists to avoid crash
+        $colsUsers = $pdo->query("SHOW COLUMNS FROM users")->fetchAll(PDO::FETCH_COLUMN);
+        $photoCol = in_array('photo_url', $colsUsers) ? "u.photo_url" : "NULL as photo_url";
+        $phoneCol = in_array('phone', $colsUsers) ? "u.phone" : "NULL as phone";
+
+        $stmt = $pdo->prepare("
+            SELECT u.id, u.name, u.email, u.role, $photoCol, $phoneCol, i.id as intern_id, i.address
+            FROM users u 
+            LEFT JOIN interns i ON u.id = i.user_id 
+            WHERE u.id = ?
+        ");
+        $stmt->execute([$_SESSION['user_id']]);
+        $currentUser = $stmt->fetch();
+    } catch (Exception $e) {
+        $currentUser = [
+            'id' => $_SESSION['user_id'],
+            'name' => $_SESSION['name'] ?? 'User',
+            'email' => $_SESSION['email'] ?? '',
+            'role' => $_SESSION['role'] ?? 'estagiario',
+            'photo_url' => null,
+            'intern_id' => null
+        ];
+    }
+}
+$role = $_SESSION['role'] ?? 'estagiario';
+?>
+<div class="flex items-center gap-6 ml-auto">
+    <!-- Notifications -->
+    <div class="relative" x-data="notificationManager()">
+        <button @click="toggle()" class="text-slate-400 hover:text-blue-400 transition relative">
+            <i class="fa-solid fa-bell text-xl"></i>
+            <span x-show="unreadCount > 0" x-text="unreadCount"
+                class="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full"></span>
+        </button>
+
+        <!-- Notifications Dropdown -->
+        <div x-show="show" @click.away="show = false"
+            class="absolute right-0 mt-4 w-80 bg-[#101622] border border-slate-800 rounded-2xl shadow-2xl z-50 overflow-hidden animate__animated animate__fadeInDown animate__faster"
+            style="display: none;">
+            <div class="p-4 border-b border-slate-800 bg-[#101622] flex justify-between items-center">
+                <h3 class="font-bold text-white">Notificações</h3>
+                <span class="text-xs text-blue-400 font-semibold" x-text="notifications.length + ' Recentes'"></span>
+            </div>
+            <div class="max-h-96 overflow-y-auto">
+                <template x-for="n in notifications" :key="n.id">
+                    <div class="p-4 border-b border-slate-800 hover:bg-slate-800/50 transition-colors flex gap-3">
+                        <div class="shrink-0 mt-1">
+                            <i class="fa-solid" :class="{
+                                  'fa-circle-check text-emerald-500': n.type === 'success',
+                                  'fa-circle-info text-blue-500': n.type === 'info',
+                                  'fa-triangle-exclamation text-amber-500': n.type === 'warning',
+                                  'fa-circle-xmark text-red-500': n.type === 'error'
+                                }"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm font-bold text-slate-200 truncate" x-text="n.title"></p>
+                            <p class="text-xs text-slate-400 mt-0.5" x-text="n.message"></p>
+                            <p class="text-[10px] text-slate-500 mt-1 uppercase"
+                                x-text="new Date(n.created_at).toLocaleDateString()"></p>
+                        </div>
+                    </div>
+                </template>
+                <template x-if="notifications.length === 0">
+                    <div class="p-8 text-center text-slate-500">
+                        <i class="fa-solid fa-bell-slash text-2xl mb-2 block"></i>
+                        <p class="text-sm">Sem notificações</p>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Dropdown -->
+    <div class="relative" x-data="{ userMenu: false }">
+        <div @click="userMenu = !userMenu" class="flex flex-col items-center cursor-pointer group">
+            <img class="object-cover w-10 h-10 rounded-full ring-2 ring-blue-500 group-hover:ring-blue-400 transition-all shadow-md"
+                src="<?= ($currentUser['photo_url'] ?? '') ?: 'https://ui-avatars.com/api/?name=' . urlencode($currentUser['name'] ?? 'User') . '&background=0D8ABC&color=fff' ?>"
+                alt="User Avatar">
+        </div>
+
+        <!-- Dropdown List -->
+        <div x-show="userMenu" @click.away="userMenu = false"
+            class="absolute right-0 mt-3 w-56 bg-[#101622] border border-slate-800 rounded-2xl shadow-2xl z-50 overflow-hidden animate__animated animate__fadeInDown animate__faster"
+            style="display: none;">
+            <div class="px-5 py-4 bg-[#101622] border-b border-slate-800">
+                <p class="text-sm font-bold text-white">
+                    <?= htmlspecialchars($currentUser['name'] ?? 'User') ?>
+                </p>
+                <p class="text-xs text-slate-400 truncate">
+                    <?= htmlspecialchars($currentUser['email'] ?? '') ?>
+                </p>
+            </div>
+            <div class="py-2">
+                <button @click="userMenu = false; $dispatch('open-profile')"
+                    class="w-full flex items-center px-5 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-blue-400 transition-colors">
+                    <i class="fa-solid fa-user-gear mr-3 opacity-70"></i> O Meu Perfil
+                </button>
+                <a href="logout.php"
+                    class="w-full flex items-center px-5 py-3 text-sm text-red-400 hover:bg-red-900/20 transition-colors border-t border-slate-800">
+                    <i class="fa-solid fa-arrow-right-from-bracket mr-3 opacity-70"></i> Sair do Sistema
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Profile Edit Modal -->
+<div x-data="profileManager()" @open-profile.window="openModal()" x-show="showProfile"
+    class="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+    style="display: none;" x-transition>
+    <div @click.away="showProfile = false"
+        class="bg-[#101622] rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden animate__animated animate__zoomIn animate__faster border border-slate-800">
+        <div class="px-8 py-6 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+            <h2 class="text-xl font-black text-white uppercase tracking-tighter">O Meu Perfil</h2>
+            <button @click="showProfile = false" class="text-slate-500 hover:text-red-500 transition-colors">
+                <i class="fa-solid fa-xmark text-2xl"></i>
+            </button>
+        </div>
+
+        <div class="p-8">
+            <form @submit.prevent="saveProfile()" enctype="multipart/form-data">
+                <!-- Photo Change -->
+                <div class="flex flex-col items-center mb-8">
+                    <div class="relative group">
+                        <img :src="previewUrl || '<?= $currentUser['photo_url'] ?: "https://ui-avatars.com/api/?name=" . urlencode($currentUser['name']) . "&background=0D8ABC&color=fff" ?>'"
+                            class="w-24 h-24 rounded-full border-4 border-[#101622] shadow-xl object-cover">
+                        <label
+                            class="absolute inset-0 flex items-center justify-center bg-black/40 text-white rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
+                            <i class="fa-solid fa-camera text-xl"></i>
+                            <input type="file" @change="handleFileChange($event)" class="hidden" name="photo">
+                        </label>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-2 font-bold uppercase tracking-wider">Mudar Foto</p>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Nome Completo</label>
+                        <input type="text" x-model="formData.name"
+                            class="w-full border-2 border-slate-800 bg-slate-900 rounded-2xl p-4 focus:bg-[#1e293b] focus:border-blue-500 transition-all font-bold text-slate-200 outline-none">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Email</label>
+                            <input type="email" x-model="formData.email"
+                                class="w-full border-2 border-slate-800 bg-slate-900 rounded-2xl p-4 focus:bg-[#1e293b] focus:border-blue-500 transition-all font-bold text-slate-200 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Telefone</label>
+                            <input type="text" x-model="formData.phone"
+                                class="w-full border-2 border-slate-800 bg-slate-900 rounded-2xl p-4 focus:bg-[#1e293b] focus:border-blue-500 transition-all font-bold text-slate-200 outline-none">
+                        </div>
+                    </div>
+
+                    <!-- Address field - only for interns -->
+                    <template x-if="'<?= $role ?>' === 'estagiario'">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Endereço Residencial</label>
+                            <input type="text" x-model="formData.address"
+                                class="w-full border-2 border-slate-800 bg-slate-900 rounded-2xl p-4 focus:bg-[#1e293b] focus:border-blue-500 transition-all font-bold text-slate-200 outline-none">
+                        </div>
+                    </template>
+
+                    <hr class="my-6 border-slate-800">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Passe Atual</label>
+                            <input type="password" x-model="formData.current_password"
+                                class="w-full border-2 border-slate-800 bg-slate-900 rounded-2xl p-4 focus:bg-[#1e293b] focus:border-blue-500 transition-all font-bold text-slate-200 outline-none"
+                                placeholder="••••••••">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Nova Passe</label>
+                            <input type="password" x-model="formData.new_password"
+                                class="w-full border-2 border-slate-800 bg-slate-900 rounded-2xl p-4 focus:bg-[#1e293b] focus:border-blue-500 transition-all font-bold text-slate-200 outline-none"
+                                placeholder="••••••••">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 flex justify-end gap-3">
+                    <button type="button" @click="showProfile = false"
+                        class="px-6 py-4 font-black text-[10px] text-slate-500 hover:text-slate-300 uppercase tracking-widest transition"><i class="fa-solid fa-xmark mr-1"></i> Cancelar</button>
+                    <button type="submit"
+                        class="px-10 py-4 bg-blue-600 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-blue-700 transition shadow-xl shadow-blue-900/40 active:scale-95 flex items-center gap-2">
+                        <i x-show="!loading" class="fa-solid fa-floppy-disk mr-1"></i>
+                        <i x-show="loading" class="fa-solid fa-circle-notch fa-spin mr-1"></i>
+                        <span x-show="!loading">Guardar</span>
+                        <span x-show="loading">A processar...</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Global profile state
+    window.profileModalState = {
+        showProfile: false,
+        loading: false,
+        previewUrl: null,
+        selectedFile: null,
+        formData: {
+            name: '<?= addslashes($currentUser['name'] ?? '') ?>',
+            email: '<?= addslashes($currentUser['email'] ?? '') ?>',
+            phone: '<?= addslashes($currentUser['phone'] ?? '') ?>',
+            address: '<?= addslashes($currentUser['address'] ?? '') ?>',
+            current_password: '',
+            new_password: ''
+        },
+        openModal() {
+            this.showProfile = true;
+        },
+        handleFileChange(e) {
+            const file = e.target.files[0];
+            if (file) {
+                this.selectedFile = file;
+                this.previewUrl = URL.createObjectURL(file);
+            }
+        },
+        async saveProfile() {
+            this.loading = true;
+            let fd = new FormData();
+            for (let key in this.formData) {
+                fd.append(key, this.formData[key]);
+            }
+            if (this.selectedFile) {
+                fd.append('photo', this.selectedFile);
+            }
+            try {
+                let res = await fetch('api/profile_update.php', { method: 'POST', body: fd });
+                let data = await res.json();
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    MeckNotifications.error('Erro', data.error || "Erro ao atualizar perfil");
+                }
+            } catch (e) {
+                MeckNotifications.error('Erro', "Erro de conexão");
+            } finally {
+                this.loading = false;
+            }
+        }
+    };
+
+    // Define Alpine component if not already defined
+    if (typeof profileManager !== 'function') {
+        function profileManager() {
+            return window.profileModalState;
+        }
+    }
+
+    // Global function to open profile modal from anywhere
+    function openProfileModal() {
+        window.profileModalState.showProfile = true;
+    }
+
+    // Also expose openModal globally for button in sidebar
+    function openModal() {
+        window.profileModalState.showProfile = true;
+    }
+
+    if (typeof notificationManager !== 'function') {
+        function notificationManager() {
+            return {
+                show: false,
+                notifications: [],
+                unreadCount: 0,
+                init() {
+                    this.fetchNotifications();
+                    setInterval(() => this.fetchNotifications(), 30000);
+                },
+                async fetchNotifications() {
+                    try {
+                        let r = await fetch('api/notifications_get.php');
+                        let d = await r.json();
+                        this.notifications = d.notifications || [];
+                        this.unreadCount = d.unreadCount || 0;
+                    } catch (e) { }
+                },
+                async toggle() {
+                    this.show = !this.show;
+                    if (this.show && this.unreadCount > 0) {
+                        await fetch('api/notifications_read.php', { method: 'POST' });
+                        this.unreadCount = 0;
+                    }
+                }
+            }
+        }
+    }
+</script>

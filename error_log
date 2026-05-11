@@ -1,0 +1,123 @@
+[25-Mar-2026 01:18:52 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'u.photo_url' in 'SELECT' in /mnt/home8/provisat/meck/dashboard.php:81
+Stack trace:
+#0 /mnt/home8/provisat/meck/dashboard.php(81): PDO->query()
+#1 {main}
+  thrown in /mnt/home8/provisat/meck/dashboard.php on line 81
+[25-Mar-2026 01:18:58 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'u.photo_url' in 'SELECT' in /mnt/home8/provisat/meck/dashboard.php:81
+Stack trace:
+#0 /mnt/home8/provisat/meck/dashboard.php(81): PDO->query()
+#1 {main}
+  thrown in /mnt/home8/provisat/meck/dashboard.php on line 81
+[25-Mar-2026 01:19:25 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'u.photo_url' in 'SELECT' in /mnt/home8/provisat/meck/dashboard.php:81
+Stack trace:
+#0 /mnt/home8/provisat/meck/dashboard.php(81): PDO->query()
+#1 {main}
+  thrown in /mnt/home8/provisat/meck/dashboard.php on line 81
+[25-Mar-2026 01:19:37 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'u.photo_url' in 'SELECT' in /mnt/home8/provisat/meck/dashboard.php:81
+Stack trace:
+#0 /mnt/home8/provisat/meck/dashboard.php(81): PDO->query()
+#1 {main}
+  thrown in /mnt/home8/provisat/meck/dashboard.php on line 81
+[25-Mar-2026 01:25:28 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'u.photo_url' in 'SELECT' in /mnt/home8/provisat/meck/dashboard.php:81
+Stack trace:
+#0 /mnt/home8/provisat/meck/dashboard.php(81): PDO->query()
+#1 {main}
+  thrown in /mnt/home8/provisat/meck/dashboard.php on line 81
+[25-Mar-2026 01:26:55 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'u.photo_url' in 'SELECT' in /mnt/home8/provisat/meck/dashboard.php:81
+Stack trace:
+#0 /mnt/home8/provisat/meck/dashboard.php(81): PDO->query()
+#1 {main}
+  thrown in /mnt/home8/provisat/meck/dashboard.php on line 81
+[25-Mar-2026 01:33:06 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'u.photo_url' in 'SELECT' in /mnt/home8/provisat/meck/dashboard.php:81
+Stack trace:
+#0 /mnt/home8/provisat/meck/dashboard.php(81): PDO->query()
+#1 {main}
+  thrown in /mnt/home8/provisat/meck/dashboard.php on line 81
+[25-Mar-2026 01:56:52 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'provisat_meck.departments' doesn't exist in /mnt/home8/provisat/meck/supervisores.php:19
+Stack trace:
+#0 /mnt/home8/provisat/meck/supervisores.php(19): PDO->query()
+#1 {main}
+  thrown in /mnt/home8/provisat/meck/supervisores.php on line 19
+[25-Mar-2026 01:56:57 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'provisat_meck.users' doesn't exist in /mnt/home8/provisat/meck/dashboard.php:15
+Stack trace:
+#0 /mnt/home8/provisat/meck/dashboard.php(15): PDO->prepare()
+#1 {main}
+  thrown in /mnt/home8/provisat/meck/dashboard.php on line 15
+[04-Apr-2026 10:16:23 UTC] PHP Warning:  Undefined array key "user_id" in /mnt/home8/provisat/meck/components/header_user.php on line 12
+[04-Apr-2026 10:16:23 UTC] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/components/header_user.php on line 118
+[04-Apr-2026 10:16:23 UTC] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/components/header_user.php on line 118
+[04-Apr-2026 10:16:24 UTC] PHP Warning:  Undefined array key "user_id" in /mnt/home8/provisat/meck/components/header_user.php on line 12
+[04-Apr-2026 10:16:24 UTC] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/components/header_user.php on line 118
+[04-Apr-2026 10:16:24 UTC] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/components/header_user.php on line 118
+[04-Apr-2026 10:16:24 UTC] PHP Warning:  Undefined array key "user_id" in /mnt/home8/provisat/meck/components/header_user.php on line 12
+[04-Apr-2026 10:16:24 UTC] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/components/header_user.php on line 118
+[04-Apr-2026 10:16:24 UTC] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/components/header_user.php on line 118
+[27-Apr-2026 12:29:50 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:29:50 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:30:00 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:30:00 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:30:05 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:30:05 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:30:19 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:30:19 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:30:26 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:30:26 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:30:29 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:30:29 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:30:36 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:30:36 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:30:39 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:30:39 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:31:05 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:31:05 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:31:30 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:31:30 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:31:41 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:31:41 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:32:19 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:32:19 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:32:40 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:32:40 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:32:52 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:32:52 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:33:54 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:33:54 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:34:00 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:34:00 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:34:02 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:34:02 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:34:04 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:34:04 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:34:06 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:34:06 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:34:08 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:34:08 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:34:10 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:34:10 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:34:18 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:34:18 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:34:20 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:34:20 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:34:24 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:34:24 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:34:29 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:34:29 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:34:34 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:34:34 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:34:37 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:34:37 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:34:43 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:34:43 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:34:49 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:34:49 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:39:06 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[27-Apr-2026 12:39:06 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[04-May-2026 10:28:44 Africa/Luanda] PHP Warning:  Undefined array key "user_id" in /mnt/home8/provisat/meck/admin/components/header_user.php on line 18
+[04-May-2026 10:28:44 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[04-May-2026 10:28:44 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[04-May-2026 10:28:45 Africa/Luanda] PHP Warning:  Undefined array key "user_id" in /mnt/home8/provisat/meck/admin/components/header_user.php on line 18
+[04-May-2026 10:28:45 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[04-May-2026 10:28:45 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[04-May-2026 10:28:45 Africa/Luanda] PHP Warning:  Undefined array key "user_id" in /mnt/home8/provisat/meck/admin/components/header_user.php on line 18
+[04-May-2026 10:28:45 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131
+[04-May-2026 10:28:45 Africa/Luanda] PHP Warning:  Trying to access array offset on false in /mnt/home8/provisat/meck/admin/components/header_user.php on line 131

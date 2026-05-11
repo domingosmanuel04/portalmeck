@@ -1,0 +1,95 @@
+/* css/future-ui.css - Futuristic Design System and Glassmorphism */
+
+:root {
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.4);
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    --accent-primary: #0EA5E9; /* Cyan 500 */
+    --accent-secondary: #8B5CF6; /* Violet 500 */
+    --accent-success: #10B981; /* Emerald 500 */
+}
+
+/* Dark Mode Tokens */
+.dark-mode {
+    --glass-bg: rgba(15, 23, 42, 0.7);
+    --glass-border: rgba(51, 65, 85, 0.5);
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+    background-color: #020617; /* Slate 950 */
+    color: #f8fafc;
+}
+
+body {
+    transition: background-color 0.5s ease, color 0.5s ease;
+}
+
+/* Glassmorphism Classes */
+.glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    border-radius: 24px;
+}
+
+.glass-morphism {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+}
+
+.glass-sidebar {
+    background: rgba(15, 23, 42, 0.85); /* Deep Slate Glass */
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dark-mode .glass-sidebar {
+    background: rgba(2, 6, 23, 0.8);
+}
+
+/* Animations */
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
+}
+
+.animate-float {
+    animation: float 6s ease-in-out infinite;
+}
+
+@keyframes pulse-border {
+    0% { border-color: var(--glass-border); }
+    50% { border-color: var(--accent-primary); }
+    100% { border-color: var(--glass-border); }
+}
+
+.animate-pulse-border {
+    animation: pulse-border 3s infinite;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.2);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-primary);
+}
+
+/* Transitions for Theme Switch */
+* {
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}

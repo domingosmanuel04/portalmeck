@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste Formulário Avaliação</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        body { font-family: Arial; background: #1a1a1a; color: #fff; padding: 20px; }
+        .test { background: #333; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .success { color: #4a9d6f; }
+        .error { color: #d32f2f; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste do Formulário de Avaliação</h1>
+    
+    <div x-data="{ 
+        testSubmit: async function() {
+            const formData = new FormData();
+            formData.append('intern_id', '1');
+            formData.append('evaluation_month', '2026-05');
+            formData.append('score_punctuality', '8');
+            formData.append('score_commitment', '9');
+            formData.append('score_productivity', '7');
+            formData.append('score_teamwork', '8');
+            formData.append('score_technical', '9');
+            formData.append('score_learning', '8');
+            formData.append('comments', 'Teste via interface');
+
+            console.log('Enviando dados:', Object.fromEntries(formData));
+            
+            try {
+                const response = await fetch('api/evaluation_create.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                console.log('Resposta:', result);
+                
+                if (result.success) {
+                    alert('✅ Avaliação criada com sucesso!');
+                    document.getElementById('result').innerHTML = '<p class=\"success\">✅ Avaliação criada com sucesso!</p>';
+                } else {
+                    alert('❌ Erro: ' + (result.error || 'Desconhecido'));
+                    document.getElementById('result').innerHTML = '<p class=\"error\">❌ Erro: ' + (result.error || 'Desconhecido') + '</p>';
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('❌ Erro de conexão: ' + error.message);
+                document.getElementById('result').innerHTML = '<p class=\"error\">❌ Erro de conexão: ' + error.message + '</p>';
+            }
+        }
+    }">
+        <div class="test">
+            <h2>Teste 1: Submissão de Avaliação</h2>
+            <p>Clique no botão abaixo para testar a submissão da avaliação:</p>
+            <button @click="testSubmit()" style="padding: 10px 20px; background: #0066cc; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">
+                Testar Submissão
+            </button>
+            <div id="result" style="margin-top: 15px;"></div>
+        </div>
+    </div>
+
+    <div class="test">
+        <h2>Teste 2: Console Logs</h2>
+        <p>Abra o DevTools (F12) para ver os logs de debug</p>
+        <p>A resposta da API aparecerá no console</p>
+    </div>
+
+    <script>
+        console.log('✅ Página de teste carregada');
+        console.log('🔗 Alpine.js está disponível: ', typeof Alpine !== 'undefined');
+    </script>
+</body>
+</html>
