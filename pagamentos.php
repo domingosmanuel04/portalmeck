@@ -151,7 +151,7 @@ foreach ($interns as $intern) {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #101622; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #101622; }
         [x-cloak] { display: none !important; }
     </style>
 </head>
@@ -160,9 +160,6 @@ foreach ($interns as $intern) {
         <?php include 'components/sidebar.php'; ?>
         <div class="flex-1 flex flex-col overflow-hidden">
             <header class="flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
-                <button @click="sidebarOpen = true" class="text-gray-400 focus:outline-none md:hidden">
-                    <i class="fa-solid fa-bars text-xl"></i>
-                </button>
                 <div class="flex-1 flex justify-between">
                     <h1 class="text-2xl font-semibold text-white hidden md:block">Gestão de Pagamentos</h1>
                     <div class="flex items-center gap-6 ml-auto">
@@ -172,7 +169,7 @@ foreach ($interns as $intern) {
             </header>
 
             <main class="flex-1 overflow-x-hidden overflow-y-auto bg-[#101622] pt-4 px-4 pb-0 flex flex-col">
-                <div class="max-w-7xl mx-auto">
+                <div class="w-full">
                     <!-- Filters & Stats -->
                     <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
                         <div class="flex items-center gap-4 w-full md:w-auto">
@@ -204,7 +201,7 @@ foreach ($interns as $intern) {
                                 <i class="fa-solid fa-file-excel"></i> Exportar Excel
                             </button>
                             <button @click="exportPDF()"
-                                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2 text-sm">
+                                    class="btn btn-primary bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2 text-sm">
                                 <i class="fa-solid fa-file-pdf"></i> Gerar Relatório
                             </button>
                         </div>
@@ -381,7 +378,7 @@ foreach ($interns as $intern) {
                         Cancelar
                     </button>
                     <button type="submit" :disabled="savingDiscounts"
-                        class="flex-[2] bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2">
+                        class="btn btn-primary flex-[2] bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2">
                         <i x-show="savingDiscounts" class="fa-solid fa-circle-notch fa-spin"></i>
                         Salvar Alterações
                     </button>

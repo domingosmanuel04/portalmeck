@@ -1,0 +1,67 @@
+services:
+  db:
+    image: mariadb:10.11
+    container_name: meck-rh-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_DATABASE:-intern_system_db}
+      MYSQL_USER: ${DB_USERNAME:-meck}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-meck_secret}
+    ports:
+      - "${DB_HOST_PORT:-3307}:3306"
+    volumes:
+      - meck_db_data:/var/lib/mysql
+      - ./database_hosting.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./seed_users.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  app:
+    build: .
+    image: meck-rh-app:latest
+    container_name: meck-rh-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:80"
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-intern_system_db}
+      DB_USERNAME: ${DB_USERNAME:-meck}
+      DB_PASSWORD: ${DB_PASSWORD:-meck_secret}
+      APP_URL: ${APP_URL:-http://localhost:8080}
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-1}
+      TURN_URL: ${TURN_URL:-turn:127.0.0.1:3478}
+      TURN_USERNAME: ${TURN_USERNAME:-meck}
+      TURN_PASSWORD: ${TURN_PASSWORD:-meckturn}
+      MAIL_FROM: ${MAIL_FROM:-noreply@meck.local}
+    volumes:
+      - ./:/var/www/html
+      - ./scripts/docker-entrypoint.sh:/usr/local/bin/meck-entrypoint.sh:ro
+    entrypoint: ["/bin/bash", "/usr/local/bin/meck-entrypoint.sh"]
+    command: ["apache2-foreground"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  coturn:
+    image: coturn/coturn:4.6
+    container_name: meck-rh-coturn
+    profiles: ["webrtc"]
+    restart: unless-stopped
+    ports:
+      - "3478:3478"
+      - "3478:3478/udp"
+      - "49152-49200:49152-49200/udp"
+    volumes:
+      - ./coturn/turnserver.conf:/etc/coturn/turnserver.conf:ro
+    command: ["-c", "/etc/coturn/turnserver.conf"]
+
+volumes:
+  meck_db_data:

@@ -4,6 +4,7 @@ session_start();
 
 $userId = $_SESSION['user_id'] ?? null;
 $role = $_SESSION['role'] ?? 'estagiario';
+$canManageTasks = in_array($role, ['admin', 'rh', 'supervisor', 'tecnico'], true);
 
 if (!$userId) {
     header('Location: index.php');
@@ -11,6 +12,7 @@ if (!$userId) {
 }
 
 require_once 'api/db.php';
+require_once 'api/security_helpers.php';
 
 $activities = [];
 $internId = null;
@@ -42,10 +44,12 @@ try {
             $totalRecords = $stmtCount->fetchColumn();
 
             $stmt = $pdo->prepare("
-                SELECT a.*, u_creator.name as creator_name, g.name as group_name
+                SELECT a.*, u_creator.name as creator_name, g.name as group_name,
+                       it.ticket_code AS intervention_ticket_code
                 FROM activities a
                 LEFT JOIN users u_creator ON a.created_by = u_creator.id
                 LEFT JOIN groups g ON a.group_id = g.id
+                LEFT JOIN intervention_tickets it ON it.id = a.intervention_ticket_id
                 WHERE a.intern_id = ? OR a.group_id IN (
                     SELECT group_id FROM group_members WHERE intern_id = ?
                 )
@@ -63,12 +67,14 @@ try {
 
         // Admin/RH/Supervisor see all with intern name and creator name
         $stmt = $pdo->query("
-            SELECT a.*, u.name as intern_name, u_creator.name as creator_name, g.name as group_name
+            SELECT a.*, u.name as intern_name, u_creator.name as creator_name, g.name as group_name,
+                   it.ticket_code AS intervention_ticket_code
             FROM activities a
             LEFT JOIN interns i ON a.intern_id = i.id
             LEFT JOIN users u ON i.user_id = u.id
             LEFT JOIN users u_creator ON a.created_by = u_creator.id
             LEFT JOIN groups g ON a.group_id = g.id
+            LEFT JOIN intervention_tickets it ON it.id = a.intervention_ticket_id
             ORDER BY a.deadline ASC
             LIMIT $limit OFFSET $offset
         ");
@@ -127,7 +133,7 @@ $activitiesJson = json_encode(array_values($activities));
     <?php include 'components/head_tags.php'; ?>
     <style>
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             background-color: #101622;
         }
 
@@ -160,9 +166,6 @@ $activitiesJson = json_encode(array_values($activities));
         <div class="flex-1 flex flex-col overflow-hidden">
 
             <header class="flex items-center justify-between px-6 py-8 bg-[#101622] border-b border-slate-800">
-                <button @click="sidebarOpen = true" class="text-gray-400 focus:outline-none md:hidden">
-                    <i class="fa-solid fa-bars text-xl"></i>
-                </button>
                 <div class="flex-1 flex justify-between items-center">
                     <h1 class="text-2xl font-semibold text-white hidden md:block">Quadro de Atividades</h1>
                     <div class="flex items-center gap-4 ml-auto">
@@ -190,10 +193,10 @@ $activitiesJson = json_encode(array_values($activities));
 
                 <!-- Toolbar -->
                 <div class="flex justify-between items-center mb-6 gap-4 flex-wrap">
-                    <?php if ($role !== 'estagiario' && $role !== 'rh'): ?>
+                    <?php if ($canManageTasks): ?>
                         <div class="flex items-center gap-3">
                             <button @click="modalOpen = true"
-                                class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-5 rounded-lg shadow-md transition-colors flex items-center gap-2">
+                                class="btn btn-primary bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-5 rounded-lg shadow-md transition-colors flex items-center gap-2">
                                 <i class="fa-solid fa-plus mr-1"></i> Atribuir Tarefa
                             </button>
                         </div>
@@ -285,18 +288,22 @@ $activitiesJson = json_encode(array_values($activities));
                                     $urgentClass = ($daysLeft !== null && $daysLeft <= 1 && $act['status'] !== 'concluido') ? 'text-red-500' : 'text-slate-500';
                                     $progressColor = $act['status'] === 'pendente' ? 'bg-red-400' : ($act['status'] === 'em_andamento' ? 'bg-blue-500' : 'bg-emerald-500');
                                     ?>
-                                    <div class="bg-[#101622] p-4 rounded-xl shadow-sm border border-slate-800 hover:shadow-md transition cursor-grab mb-3 relative overflow-hidden group activity-card"
+                                    <div class="bg-[#101622] p-4 rounded-xl shadow-sm border border-slate-800 hover:shadow-md hover:border-blue-500/40 transition cursor-pointer mb-3 relative overflow-hidden group activity-card"
                                         data-id="<?= $act['id'] ?>"
-                                        x-data="{open: false}">
+                                        @click="openIssue(<?php echo (int) $act['id']; ?>)">
                                         <!-- Top progress bar -->
                                         <div class="absolute top-0 left-0 h-1 <?= $progressColor ?> rounded-t-xl transition-all"
                                             style="width: <?= $act['progress_percentage'] ?>%;"></div>
 
                                         <div class="flex justify-between items-start mb-2">
-                                            <span
-                                                class="bg-slate-800 text-slate-400 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide truncate max-w-[120px]">
-                                                <?= htmlspecialchars($act['group_name'] ?: ($act['intern_name'] ?? 'Individual')) ?>
-                                            </span>
+                                            <span class="text-[10px] font-mono text-blue-400/80 font-bold">ACT-<?= (int) $act['id'] ?></span>
+                                            <?php if (!empty($act['intervention_ticket_code'])): ?>
+                                                <a href="tickets_intervencao.php?id=<?= (int) ($act['intervention_ticket_id'] ?? 0) ?>"
+                                                   class="text-[10px] font-mono text-amber-300 hover:underline"
+                                                   onclick="event.stopPropagation()">
+                                                    <?= htmlspecialchars($act['intervention_ticket_code']) ?>
+                                                </a>
+                                            <?php endif; ?>
                                             <?php if ($daysLeft !== null): ?>
                                                 <span
                                                     class="text-[10px] font-bold <?= $urgentClass ?> flex items-center gap-1 whitespace-nowrap">
@@ -317,9 +324,11 @@ $activitiesJson = json_encode(array_values($activities));
                                         <?php endif; ?>
 
                                         <div class="flex items-center justify-between border-t border-slate-800 pt-3 mt-1 gap-2">
-                                            <div class="flex flex-col">
-                                                <span class="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Criado por</span>
-                                                <span class="text-[10px] font-bold text-slate-300"><?= htmlspecialchars($act['creator_name'] ?: 'Sistema') ?></span>
+                                            <div class="flex items-center gap-2 min-w-0">
+                                                <span
+                                                    class="bg-slate-800 text-slate-400 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide truncate max-w-[110px]">
+                                                    <?= htmlspecialchars($act['group_name'] ?: ($act['intern_name'] ?? 'Individual')) ?>
+                                                </span>
                                             </div>
 
                                             <span
@@ -327,11 +336,11 @@ $activitiesJson = json_encode(array_values($activities));
                                                 <?= $act['progress_percentage'] ?>%
                                             </span>
                                         </div>
-                                        <?php if ($role !== 'estagiario'): ?>
-                                            <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-all flex gap-1">
-                                                <button @click="openEditModal(<?= htmlspecialchars(json_encode($act)) ?>)"
-                                                    class="bg-slate-800 hover:bg-blue-600 text-slate-400 hover:text-white p-1.5 rounded-lg transition-all shadow-lg" title="Editar">
-                                                    <i class="fa-solid fa-pen text-[10px]"></i>
+                                        <?php if ($canManageTasks): ?>
+                                            <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-all flex gap-1" @click.stop>
+                                                <button @click="openIssue(<?php echo (int)$act['id']; ?>)"
+                                                    class="btn btn-primary bg-slate-800 hover:bg-blue-600 text-slate-400 hover:text-white p-1.5 rounded-lg transition-all shadow-lg" title="Abrir">
+                                                    <i class="fa-solid fa-up-right-from-square text-[10px]"></i>
                                                 </button>
                                                 <button @click="deleteActivity(<?= $act['id'] ?>)"
                                                     class="bg-slate-800 hover:bg-red-600 text-slate-400 hover:text-white p-1.5 rounded-lg transition-all shadow-lg" title="Eliminar">
@@ -363,7 +372,8 @@ $activitiesJson = json_encode(array_values($activities));
                         $c = $statusColors[$act['status']] ?? 'gray';
                         ?>
                         <div x-show="filter === 'all' || filter === '<?= $act['status'] ?>'"
-                            class="bg-[#101622] rounded-xl border border-slate-800 shadow-sm hover:shadow-md transition p-4 flex items-center gap-4 group relative overflow-hidden">
+                            class="bg-[#101622] rounded-xl border border-slate-800 shadow-sm hover:shadow-md hover:border-blue-500/40 transition p-4 flex items-center gap-4 group relative overflow-hidden cursor-pointer"
+                            @click="openIssue(<?php echo (int)$act['id']; ?>)">
                             <!-- Left color bar -->
                             <div
                                 class="absolute left-0 top-0 bottom-0 w-1 <?= $act['status'] === 'pendente' ? 'bg-red-400' : ($act['status'] === 'em_andamento' ? 'bg-blue-500' : 'bg-emerald-500') ?> rounded-l-xl">
@@ -380,6 +390,14 @@ $activitiesJson = json_encode(array_values($activities));
                             <!-- Content -->
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center gap-2 mb-0.5">
+                                    <span class="text-[10px] font-mono text-blue-400/80 font-bold">ACT-<?= (int) $act['id'] ?></span>
+                                    <?php if (!empty($act['intervention_ticket_code'])): ?>
+                                        <a href="tickets_intervencao.php?id=<?= (int) ($act['intervention_ticket_id'] ?? 0) ?>"
+                                           class="text-[10px] font-mono text-amber-300 hover:underline"
+                                           onclick="event.stopPropagation()">
+                                            <?= htmlspecialchars($act['intervention_ticket_code']) ?>
+                                        </a>
+                                    <?php endif; ?>
                                     <h4
                                         class="font-bold text-white truncate <?= $act['status'] === 'concluido' ? 'line-through text-slate-500' : '' ?>">
                                         <?= htmlspecialchars($act['title']) ?>
@@ -413,30 +431,18 @@ $activitiesJson = json_encode(array_values($activities));
                                 </div>
                             </div>
 
-                            <!-- Status selector for intern -->
-                            <?php if ($role === 'estagiario'): ?>
-                                <select onchange="updateStatus(<?= $act['id'] ?>, this.value, this)"
-                                    class="text-xs font-bold border border-slate-700 rounded-xl px-3 py-2 bg-slate-900 text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer flex-shrink-0 appearance-none"
-                                    name="status">
-                                    <option value="pendente" <?= $act['status'] === 'pendente' ? 'selected' : '' ?>>⏳ Pendente
-                                    </option>
-                                    <option value="em_andamento" <?= $act['status'] === 'em_andamento' ? 'selected' : '' ?>>🔄 Em
-                                        Andamento</option>
-                                    <option value="concluido" <?= $act['status'] === 'concluido' ? 'selected' : '' ?>>✅ Concluído
-                                    </option>
-                                </select>
-                            <?php else: ?>
-                                <div class="flex gap-2">
-                                    <button @click="openEditModal(<?= htmlspecialchars(json_encode($act)) ?>)"
-                                        class="py-2 px-3 rounded-lg font-medium text-xs text-slate-400 bg-slate-800 hover:bg-blue-600 hover:text-white transition flex items-center gap-1.5 flex-shrink-0">
-                                        <i class="fa-solid fa-pen"></i> Editar
-                                    </button>
+                            <div class="flex gap-2 flex-shrink-0" @click.stop>
+                                <?php if ($canManageTasks): ?>
                                     <button @click="deleteActivity(<?= $act['id'] ?>)"
-                                        class="py-2 px-3 rounded-lg font-medium text-xs text-slate-400 bg-slate-800 hover:bg-red-600 hover:text-white transition flex items-center gap-1.5 flex-shrink-0">
+                                        class="py-2 px-3 rounded-lg font-medium text-xs text-slate-400 bg-slate-800 hover:bg-red-600 hover:text-white transition flex items-center gap-1.5">
                                         <i class="fa-solid fa-trash"></i>
                                     </button>
-                                </div>
-                            <?php endif; ?>
+                                <?php endif; ?>
+                                <button @click="openIssue(<?php echo (int)$act['id']; ?>)"
+                                    class="btn btn-primary py-2 px-3 rounded-lg font-medium text-xs text-slate-200 bg-slate-800 hover:bg-blue-600 hover:text-white transition flex items-center gap-1.5">
+                                    <i class="fa-solid fa-up-right-from-square"></i> Abrir
+                                </button>
+                            </div>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -485,50 +491,189 @@ $activitiesJson = json_encode(array_values($activities));
                     </div>
                 </div>
 
-                <?php if ($role !== 'estagiario'): ?>
-                    <!-- Modal Task Edit -->
-                    <div x-show="editModalOpen"
-                        class="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-50 p-4"
-                        style="display: none;" x-transition>
-                        <div @click.away="editModalOpen = false"
-                            class="bg-[#101622] rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate__animated animate__zoomIn animate__faster border border-slate-800">
-                            <div class="px-6 py-4 border-b border-slate-800 bg-slate-900 flex justify-between items-center">
-                                <h2 class="text-lg font-bold text-white">Editar Tarefa</h2>
-                                <button @click="editModalOpen = false" class="text-slate-400 hover:text-red-500"><i
-                                        class="fa-solid fa-xmark text-xl"></i></button>
+                <!-- ==================== ISSUE DETAIL (Jira-like) ==================== -->
+                <div x-show="issueOpen" x-cloak
+                    class="fixed inset-0 z-[120] flex items-stretch justify-end bg-black/60"
+                    @keydown.escape.window="closeIssue()">
+                    <div class="absolute inset-0" @click="closeIssue()"></div>
+                    <div class="relative w-full max-w-5xl h-full md:h-[96%] md:my-auto md:mr-4 md:rounded-2xl bg-[#0f1524] border border-slate-700/80 shadow-2xl overflow-hidden flex flex-col"
+                        @click.stop>
+                        <!-- Header -->
+                        <div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-slate-800 bg-slate-900/80">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <span class="inline-flex items-center gap-1.5 text-xs font-bold text-blue-300 bg-blue-500/10 border border-blue-500/20 px-2.5 py-1 rounded-md">
+                                    <i class="fa-solid fa-clipboard-check"></i>
+                                    <span x-text="'ACT-' + (issue?.id || '')"></span>
+                                </span>
+                                <span class="text-xs text-slate-500 truncate" x-text="issue?.group_name || issue?.intern_name || 'Tarefa'"></span>
                             </div>
-                            <form class="p-6" method="POST" action="api/activity_update.php" @submit="submitEditForm">
-                                <input type="hidden" name="activity_id" x-model="editActivity.id">
-                                <div class="mb-4">
-                                    <label class="block text-sm font-medium text-slate-300 mb-1">Título da Atividade
-                                        *</label>
-                                    <input type="text" name="title" x-model="editActivity.title"
-                                        class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:ring-blue-500 focus:outline-none"
-                                        required>
+                            <div class="flex items-center gap-2">
+                                <button type="button" @click="closeIssue()" class="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800">
+                                    <i class="fa-solid fa-xmark text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex-1 overflow-y-auto">
+                            <template x-if="issueLoading">
+                                <div class="p-10 text-center text-slate-400">
+                                    <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-3"></i>
+                                    <p>A carregar tarefa...</p>
                                 </div>
-                                <div class="mb-4">
-                                    <label class="block text-sm font-medium text-slate-300 mb-1">Descrição</label>
-                                    <textarea rows="3" name="description" x-model="editActivity.description"
-                                        class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:ring-blue-500 focus:outline-none"></textarea>
+                            </template>
+
+                            <template x-if="!issueLoading && issue">
+                                <div class="grid grid-cols-1 lg:grid-cols-3 gap-0 min-h-full">
+                                    <!-- Main -->
+                                    <div class="lg:col-span-2 p-5 md:p-7 space-y-6 border-r border-slate-800">
+                                        <div>
+                                            <input type="text" x-model="issue.title" :readonly="!canManageIssue"
+                                                @change="saveIssueFields()"
+                                                class="w-full bg-transparent text-2xl font-bold text-white border border-transparent hover:border-slate-700 focus:border-blue-500 rounded-lg px-2 py-1 outline-none"
+                                                :class="!canManageIssue && 'opacity-90 cursor-default'">
+                                        </div>
+
+                                        <div>
+                                            <div class="flex items-center justify-between mb-2">
+                                                <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400">Descrição</h3>
+                                                <button type="button" @click="saveDescription()"
+                                                    class="text-[11px] text-blue-400 hover:text-blue-300 font-semibold">Guardar descrição</button>
+                                            </div>
+                                            <textarea rows="7" x-model="issue.description"
+                                                placeholder="Adicionar uma descrição..."
+                                                class="w-full bg-slate-900/60 border border-slate-800 rounded-xl p-3 text-sm text-slate-200 placeholder:text-slate-600 focus:border-blue-500 outline-none resize-y min-h-[140px]"></textarea>
+                                        </div>
+
+                                        <!-- Attachments -->
+                                        <div>
+                                            <div class="flex items-center justify-between mb-3">
+                                                <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400">Anexos</h3>
+                                                <label class="cursor-pointer text-[11px] font-bold text-blue-400 hover:text-blue-300 inline-flex items-center gap-1.5">
+                                                    <i class="fa-solid fa-paperclip"></i> Carregar ficheiro
+                                                    <input type="file" class="hidden" @change="uploadAttachment($event)">
+                                                </label>
+                                            </div>
+                                            <div class="border border-dashed border-slate-700 rounded-xl p-4 bg-slate-900/40"
+                                                @dragover.prevent @drop.prevent="onDropAttachment($event)">
+                                                <template x-if="!attachments.length">
+                                                    <p class="text-sm text-slate-500 text-center py-4">Arraste ficheiros para aqui ou use “Carregar ficheiro”.</p>
+                                                </template>
+                                                <div class="space-y-2">
+                                                    <template x-for="file in attachments" :key="file.id">
+                                                        <div class="flex items-center gap-3 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2">
+                                                            <i class="fa-solid fa-file text-slate-400"></i>
+                                                            <div class="min-w-0 flex-1">
+                                                                <a :href="file.file_path" target="_blank" class="text-sm text-blue-300 hover:underline truncate block" x-text="file.file_name"></a>
+                                                                <p class="text-[10px] text-slate-500">
+                                                                    <span x-text="formatBytes(file.file_size)"></span>
+                                                                    · <span x-text="file.user_name"></span>
+                                                                </p>
+                                                            </div>
+                                                            <button type="button" @click="deleteAttachment(file.id)" class="text-slate-500 hover:text-red-400 p-1">
+                                                                <i class="fa-solid fa-trash text-xs"></i>
+                                                            </button>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Comments -->
+                                        <div>
+                                            <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Comentários</h3>
+                                            <div class="space-y-4 mb-4 max-h-72 overflow-y-auto pr-1">
+                                                <template x-if="!comments.length">
+                                                    <p class="text-sm text-slate-500">Ainda sem comentários.</p>
+                                                </template>
+                                                <template x-for="c in comments" :key="c.id">
+                                                    <div class="flex gap-3">
+                                                        <div class="w-8 h-8 rounded-full bg-indigo-600/30 text-indigo-200 flex items-center justify-center text-xs font-bold shrink-0"
+                                                            x-text="(c.user_name || '?').slice(0,2).toUpperCase()"></div>
+                                                        <div class="flex-1 bg-slate-900/70 border border-slate-800 rounded-xl px-3 py-2">
+                                                            <div class="flex items-center justify-between gap-2 mb-1">
+                                                                <span class="text-sm font-semibold text-white" x-text="c.user_name"></span>
+                                                                <span class="text-[10px] text-slate-500" x-text="formatDateTime(c.created_at)"></span>
+                                                            </div>
+                                                            <p class="text-sm text-slate-300 whitespace-pre-wrap" x-text="c.body"></p>
+                                                            <button type="button" x-show="c.user_id == currentUserId || canManageIssue"
+                                                                @click="deleteComment(c.id)"
+                                                                class="mt-1 text-[10px] text-slate-500 hover:text-red-400">Eliminar</button>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            <div class="flex gap-2 items-start">
+                                                <textarea rows="2" x-model="newComment" placeholder="Escrever um comentário..."
+                                                    class="flex-1 bg-slate-900 border border-slate-800 rounded-xl p-3 text-sm text-white focus:border-blue-500 outline-none"
+                                                    @keydown.ctrl.enter="addComment()"></textarea>
+                                                <button type="button" @click="addComment()" :disabled="!newComment.trim() || commentSending"
+                                                    class="btn btn-primary px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-semibold disabled:opacity-40">
+                                                    <i class="fa-solid fa-paper-plane"></i>
+                                                </button>
+                                            </div>
+                                            <p class="text-[10px] text-slate-600 mt-1">Ctrl + Enter para enviar</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Side panel -->
+                                    <div class="p-5 md:p-6 space-y-5 bg-slate-950/40">
+                                        <div>
+                                            <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Status</label>
+                                            <select x-model="issue.status" @change="changeIssueStatus()" :disabled="!canChangeStatus"
+                                                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 outline-none disabled:opacity-60 disabled:cursor-not-allowed">
+                                                <option value="pendente">Pendente</option>
+                                                <option value="em_andamento">Em andamento</option>
+                                                <option value="concluido">Concluído</option>
+                                            </select>
+                                            <p x-show="!canChangeStatus" class="text-[10px] text-slate-500 mt-1">Só admin/supervisor pode mudar o status.</p>
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Responsável</label>
+                                            <p class="text-sm text-slate-200" x-text="issue.intern_name || issue.group_name || '—'"></p>
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Reporter</label>
+                                            <p class="text-sm text-slate-200" x-text="issue.creator_name || 'Sistema'"></p>
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Prazo</label>
+                                            <input type="date" x-model="issue.deadline" :readonly="!canManageIssue" @change="saveIssueFields()"
+                                                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 outline-none disabled:opacity-60"
+                                                :class="!canManageIssue && 'opacity-70 cursor-not-allowed'">
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Progresso</label>
+                                            <div class="flex items-center gap-3">
+                                                <div class="flex-1 h-2 rounded-full bg-slate-800 overflow-hidden">
+                                                    <div class="h-full rounded-full transition-all"
+                                                        :class="issue.status === 'pendente' ? 'bg-red-400' : (issue.status === 'em_andamento' ? 'bg-blue-500' : 'bg-emerald-500')"
+                                                        :style="'width:' + (issue.progress_percentage || 0) + '%'"></div>
+                                                </div>
+                                                <span class="text-sm font-bold text-slate-300" x-text="(issue.progress_percentage || 0) + '%'"></span>
+                                            </div>
+                                        </div>
+
+                                        <div class="pt-2 border-t border-slate-800">
+                                            <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Criada em</label>
+                                            <p class="text-sm text-slate-400" x-text="formatDateTime(issue.created_at)"></p>
+                                        </div>
+
+                                        <button type="button" x-show="canManageIssue" @click="deleteActivity(issue.id)"
+                                            class="w-full mt-4 py-2.5 rounded-xl border border-red-900/50 text-red-400 hover:bg-red-950/40 text-sm font-semibold">
+                                            <i class="fa-solid fa-trash mr-1"></i> Eliminar tarefa
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="mb-4">
-                                    <label class="block text-sm font-medium text-slate-300 mb-1">Prazo de Entrega
-                                        *</label>
-                                    <input type="date" name="deadline" x-model="editActivity.deadline"
-                                        class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:ring-blue-500 focus:outline-none"
-                                        required>
-                                </div>
-                                <div class="flex justify-end gap-3 mt-6">
-                                    <button type="button" @click="editModalOpen = false"
-                                        class="py-2 px-4 rounded-lg font-medium text-slate-300 bg-slate-800 hover:bg-slate-700"><i class="fa-solid fa-xmark mr-1"></i> Cancelar</button>
-                                    <button type="submit"
-                                        class="py-2 px-6 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 transition shadow-lg"><i class="fa-solid fa-floppy-disk mr-1"></i> Salvar</button>
-                                </div>
-                            </form>
+                            </template>
                         </div>
                     </div>
+                </div>
 
-                    <?php if ($role !== 'rh'): ?>
+                <?php if ($canManageTasks): ?>
                     <!-- Modal Task Assignment -->
                     <div x-show="modalOpen"
                         class="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-50 p-4"
@@ -541,6 +686,7 @@ $activitiesJson = json_encode(array_values($activities));
                                         class="fa-solid fa-xmark text-xl"></i></button>
                             </div>
                             <form class="p-6" method="POST" action="api/activity_create.php">
+                                <?= function_exists('meckCsrfField') ? meckCsrfField() : '' ?>
                                 <div class="mb-4">
                                     <label class="block text-sm font-medium text-slate-300 mb-1">Título da Atividade
                                         *</label>
@@ -566,25 +712,26 @@ $activitiesJson = json_encode(array_values($activities));
                                         <div class="flex gap-2 mb-2">
                                             <label class="flex-1">
                                                 <input type="radio" name="assignment_type" value="individual" x-model="type" class="hidden peer">
-                                                <div class="text-center p-1.5 border border-slate-700 rounded-lg peer-checked:bg-blue-600 peer-checked:border-blue-600 cursor-pointer text-[10px] font-bold uppercase tracking-wider transition-all">Individual</div>
+                                                <div class="btn btn-primary text-center p-1.5 border border-slate-700 rounded-lg peer-checked:bg-blue-600 peer-checked:border-blue-600 cursor-pointer text-[10px] font-bold uppercase tracking-wider transition-all">Individual</div>
                                             </label>
                                             <label class="flex-1">
                                                 <input type="radio" name="assignment_type" value="group" x-model="type" class="hidden peer">
-                                                <div class="text-center p-1.5 border border-slate-700 rounded-lg peer-checked:bg-blue-600 peer-checked:border-blue-600 cursor-pointer text-[10px] font-bold uppercase tracking-wider transition-all">Grupo</div>
+                                                <div class="btn btn-primary text-center p-1.5 border border-slate-700 rounded-lg peer-checked:bg-blue-600 peer-checked:border-blue-600 cursor-pointer text-[10px] font-bold uppercase tracking-wider transition-all">Grupo</div>
                                             </label>
                                         </div>
 
                                         <div x-show="type === 'individual'">
                                             <select name="intern_id"
                                                 class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-white focus:ring-blue-500 focus:outline-none">
-                                                <option value="">Selecionar Estagiário...</option>
+                                                <option value="">Selecionar colaborador...</option>
                                                 <?php
                                                 try {
                                                     $interns = $pdo->query("SELECT i.id, u.name FROM interns i JOIN users u ON i.user_id = u.id ORDER BY u.name ASC")->fetchAll(PDO::FETCH_ASSOC);
-                                                    foreach ($interns as $intern): ?>
-                                                        <option value="<?= $intern['id'] ?>"><?= htmlspecialchars($intern['name']) ?></option>
-                                                    <?php endforeach;
-                                                } catch (Exception $e) {}
+                                                    foreach ($interns as $intern) {
+                                                        echo '<option value="' . (int) $intern['id'] . '">' . htmlspecialchars($intern['name']) . '</option>';
+                                                    }
+                                                } catch (Exception $e) {
+                                                }
                                                 ?>
                                             </select>
                                         </div>
@@ -600,16 +747,42 @@ $activitiesJson = json_encode(array_values($activities));
                                         </div>
                                     </div>
                                 </div>
+                                <div class="mb-4 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 space-y-2">
+                                    <label class="flex items-center gap-2 text-sm text-amber-100">
+                                        <input type="checkbox" name="requires_ticket" value="1" class="rounded border-slate-600">
+                                        Intervenção técnica (exige ticket)
+                                    </label>
+                                    <p class="text-[11px] text-slate-400">Se for trabalho técnico (servidor, rede, app), abra primeiro um ticket e associe-o aqui. Em caso de incidente, o ticket é a prova.</p>
+                                    <select name="intervention_ticket_id"
+                                        class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-white">
+                                        <option value="">Sem ticket / selecionar ticket aberto…</option>
+                                        <?php
+                                        try {
+                                            require_once __DIR__ . '/api/intervention_schema.php';
+                                            interventionEnsureSchema($pdo);
+                                            $openTickets = $pdo->query("
+                                                SELECT id, ticket_code, title FROM intervention_tickets
+                                                WHERE status IN ('aberto','em_progresso','aguardando')
+                                                ORDER BY id DESC LIMIT 50
+                                            ")->fetchAll(PDO::FETCH_ASSOC);
+                                            foreach ($openTickets as $ot) {
+                                                echo '<option value="' . (int) $ot['id'] . '">' . htmlspecialchars($ot['ticket_code'] . ' — ' . $ot['title']) . '</option>';
+                                            }
+                                        } catch (Exception $e) {
+                                        }
+                                        ?>
+                                    </select>
+                                    <a href="tickets_intervencao.php" class="text-[11px] text-cyan-400 hover:underline">Abrir Tickets Técnicos →</a>
+                                </div>
                                 <div class="flex justify-end gap-3 mt-6">
                                     <button type="button" @click="modalOpen = false"
                                         class="py-2 px-4 rounded-lg font-medium text-slate-300 bg-slate-800 hover:bg-slate-700"><i class="fa-solid fa-xmark mr-1"></i> Cancelar</button>
                                     <button type="submit"
-                                        class="py-2 px-6 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 transition shadow-lg"><i class="fa-solid fa-plus mr-1"></i> Criar Tarefa</button>
+                                        class="btn btn-primary py-2 px-6 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 transition shadow-lg"><i class="fa-solid fa-plus mr-1"></i> Criar Tarefa</button>
                                 </div>
                             </form>
                         </div>
                     </div>
-                <?php endif; ?>
                 <?php endif; ?>
 
             </main>
@@ -622,21 +795,203 @@ $activitiesJson = json_encode(array_values($activities));
             return {
                 sidebarOpen: false,
                 modalOpen: false,
-                editModalOpen: false,
-                editActivity: {},
                 view: 'kanban',
                 filter: 'all',
+                issueOpen: false,
+                issueLoading: false,
+                issue: null,
+                comments: [],
+                attachments: [],
+                canEditIssue: false,
+                canManageIssue: false,
+                canChangeStatus: false,
+                newComment: '',
+                commentSending: false,
+                currentUserId: <?= (int) $userId ?>,
+                canManageTasks: <?= $canManageTasks ? 'true' : 'false' ?>,
                 init() {
                     this.initSortable();
                 },
-                openEditModal(activity) {
-                    this.editActivity = {
-                        id: activity.id,
-                        title: activity.title || '',
-                        description: activity.description || '',
-                        deadline: activity.deadline || ''
-                    };
-                    this.editModalOpen = true;
+                async openIssue(id) {
+                    this.issueOpen = true;
+                    this.issueLoading = true;
+                    this.issue = null;
+                    this.comments = [];
+                    this.attachments = [];
+                    this.newComment = '';
+                    try {
+                        const res = await fetch('api/activity_get.php?id=' + id);
+                        const data = await res.json();
+                        if (!data.success) {
+                            MeckNotifications.error('Erro', data.error || 'Não foi possível abrir a tarefa.');
+                            this.closeIssue();
+                            return;
+                        }
+                        this.issue = data.activity;
+                        this.comments = data.comments || [];
+                        this.attachments = data.attachments || [];
+                        this.canManageIssue = !!(data.can_manage ?? data.can_edit);
+                        this.canEditIssue = this.canManageIssue;
+                        this.canChangeStatus = !!data.can_change_status;
+                    } catch (e) {
+                        MeckNotifications.error('Erro', 'Erro de conexão.');
+                        this.closeIssue();
+                    } finally {
+                        this.issueLoading = false;
+                    }
+                },
+                closeIssue() {
+                    this.issueOpen = false;
+                    this.issue = null;
+                },
+                async saveDescription() {
+                    if (!this.issue) return;
+                    const fd = new FormData();
+                    fd.append('activity_id', this.issue.id);
+                    fd.append('description', this.issue.description || '');
+                    fd.append('mode', 'description');
+                    try {
+                        const res = await fetch('api/activity_update.php', { method: 'POST', body: fd });
+                        const data = await res.json();
+                        if (data.success) {
+                            MeckNotifications.toast('Descrição guardada');
+                        } else {
+                            MeckNotifications.error('Erro', data.error || 'Falha ao guardar');
+                        }
+                    } catch (e) {
+                        MeckNotifications.error('Erro', 'Erro de conexão.');
+                    }
+                },
+                async saveIssueFields() {
+                    if (!this.issue || !this.canManageIssue) return;
+                    const fd = new FormData();
+                    fd.append('activity_id', this.issue.id);
+                    fd.append('title', this.issue.title || '');
+                    fd.append('description', this.issue.description || '');
+                    fd.append('deadline', this.issue.deadline || '');
+                    fd.append('status', this.issue.status || 'pendente');
+                    fd.append('mode', 'full');
+                    try {
+                        const res = await fetch('api/activity_update.php', { method: 'POST', body: fd });
+                        const data = await res.json();
+                        if (data.success) {
+                            MeckNotifications.toast('Tarefa actualizada');
+                        } else {
+                            MeckNotifications.error('Erro', data.error || 'Falha ao guardar');
+                        }
+                    } catch (e) {
+                        MeckNotifications.error('Erro', 'Erro de conexão.');
+                    }
+                },
+                async changeIssueStatus() {
+                    if (!this.issue || !this.canChangeStatus) {
+                        MeckNotifications.error('Sem permissão', 'Apenas admin ou supervisor pode mudar o status.');
+                        return;
+                    }
+                    const fd = new FormData();
+                    fd.append('activity_id', this.issue.id);
+                    fd.append('status', this.issue.status);
+                    try {
+                        const res = await fetch('api/activity_update_status.php', { method: 'POST', body: fd });
+                        const data = await res.json();
+                        if (data.success) {
+                            this.issue.progress_percentage = data.progress;
+                            MeckNotifications.toast('Status actualizado');
+                        } else {
+                            MeckNotifications.error('Erro', data.error || 'Falha ao alterar status');
+                        }
+                    } catch (e) {
+                        MeckNotifications.error('Erro', 'Erro de conexão.');
+                    }
+                },
+                async addComment() {
+                    if (!this.issue || !this.newComment.trim() || this.commentSending) return;
+                    this.commentSending = true;
+                    const fd = new FormData();
+                    fd.append('activity_id', this.issue.id);
+                    fd.append('body', this.newComment.trim());
+                    try {
+                        const res = await fetch('api/activity_comment.php', { method: 'POST', body: fd });
+                        const data = await res.json();
+                        if (data.success) {
+                            this.comments.push(data.comment);
+                            this.newComment = '';
+                        } else {
+                            MeckNotifications.error('Erro', data.error || 'Falha ao comentar');
+                        }
+                    } catch (e) {
+                        MeckNotifications.error('Erro', 'Erro de conexão.');
+                    } finally {
+                        this.commentSending = false;
+                    }
+                },
+                async deleteComment(id) {
+                    const fd = new FormData();
+                    fd.append('activity_id', this.issue.id);
+                    fd.append('comment_id', id);
+                    fd.append('action', 'delete');
+                    const res = await fetch('api/activity_comment.php', { method: 'POST', body: fd });
+                    const data = await res.json();
+                    if (data.success) {
+                        this.comments = this.comments.filter(c => c.id != id);
+                    } else {
+                        MeckNotifications.error('Erro', data.error || 'Falha ao eliminar');
+                    }
+                },
+                async uploadAttachment(event) {
+                    const file = event.target.files?.[0];
+                    event.target.value = '';
+                    if (!file || !this.issue) return;
+                    await this._sendAttachment(file);
+                },
+                async onDropAttachment(event) {
+                    const file = event.dataTransfer?.files?.[0];
+                    if (!file || !this.issue) return;
+                    await this._sendAttachment(file);
+                },
+                async _sendAttachment(file) {
+                    const fd = new FormData();
+                    fd.append('activity_id', this.issue.id);
+                    fd.append('file', file);
+                    try {
+                        const res = await fetch('api/activity_attachment.php', { method: 'POST', body: fd });
+                        const data = await res.json();
+                        if (data.success) {
+                            this.attachments.unshift(data.attachment);
+                            MeckNotifications.toast('Anexo carregado');
+                        } else {
+                            MeckNotifications.error('Erro', data.error || 'Falha no upload');
+                        }
+                    } catch (e) {
+                        MeckNotifications.error('Erro', 'Erro de conexão.');
+                    }
+                },
+                async deleteAttachment(id) {
+                    const fd = new FormData();
+                    fd.append('activity_id', this.issue.id);
+                    fd.append('attachment_id', id);
+                    fd.append('action', 'delete');
+                    const res = await fetch('api/activity_attachment.php', { method: 'POST', body: fd });
+                    const data = await res.json();
+                    if (data.success) {
+                        this.attachments = this.attachments.filter(a => a.id != id);
+                    } else {
+                        MeckNotifications.error('Erro', data.error || 'Falha ao eliminar');
+                    }
+                },
+                formatBytes(n) {
+                    n = Number(n) || 0;
+                    if (n < 1024) return n + ' B';
+                    if (n < 1048576) return (n / 1024).toFixed(1) + ' KB';
+                    return (n / 1048576).toFixed(1) + ' MB';
+                },
+                formatDateTime(v) {
+                    if (!v) return '—';
+                    try {
+                        return new Date(v.replace(' ', 'T')).toLocaleString('pt-PT');
+                    } catch (e) {
+                        return v;
+                    }
                 },
                 async deleteActivity(id) {
                     const confirmed = await MeckNotifications.confirm(
@@ -662,37 +1017,16 @@ $activitiesJson = json_encode(array_values($activities));
                         }
                     }
                 },
-                submitEditForm(e) {
-                    e.preventDefault();
-                    const form = e.target;
-                    const fd = new FormData(form);
-                    this._submitEdit(fd);
-                },
-                async _submitEdit(fd) {
-                    try {
-                        const res = await fetch('api/activity_update.php', { method: 'POST', body: fd });
-                        const data = await res.json();
-                        if (data.success) {
-                            showToast('✅ Tarefa atualizada!');
-                            this.editModalOpen = false;
-                            setTimeout(() => window.location.reload(), 1000);
-                        } else {
-                            MeckNotifications.error('Erro', data.error || 'Erro ao atualizar.');
-                        }
-                    } catch (e) {
-                        MeckNotifications.error('Erro', 'Erro de conexão.');
-                    }
-                },
                 initSortable() {
-                    // Only allow dragging if NOT an intern (or if we want interns to move their own)
-                    // The prompt says "quando é criado uma tarefa deixa ele permir ser arastado"
-                    // Usually this is for supervisors. If interns should move their own:
+                    if (!this.canManageTasks) return;
                     const containers = document.querySelectorAll('.kanban-items');
                     containers.forEach(container => {
                         new Sortable(container, {
                             group: 'tasks',
                             animation: 150,
                             draggable: '.activity-card',
+                            filter: 'button, a, input, select, textarea',
+                            preventOnFilter: true,
                             onEnd: async (evt) => {
                                 const activityId = evt.item.dataset.id;
                                 const newStatus = evt.to.dataset.status;
@@ -713,11 +1047,10 @@ $activitiesJson = json_encode(array_values($activities));
                         const data = await res.json();
                         if (data.success) {
                             MeckNotifications.toast('Status atualizado!');
-                            // Update progress bar and style based on new status
                             const progressBar = cardEl.querySelector('.absolute.top-0');
                             if (progressBar) {
                                 progressBar.style.width = data.progress + '%';
-                                progressBar.className = 'absolute top-0 left-0 h-1 rounded-t-xl transition-all ' + 
+                                progressBar.className = 'absolute top-0 left-0 h-1 rounded-t-xl transition-all ' +
                                     (newStatus === 'pendente' ? 'bg-red-400' : (newStatus === 'em_andamento' ? 'bg-blue-500' : 'bg-emerald-500'));
                             }
                         } else {
@@ -730,11 +1063,6 @@ $activitiesJson = json_encode(array_values($activities));
                     }
                 }
             }
-        }
-
-        function labelFor(status) {
-            const map = { pendente: 'Pendente', em_andamento: 'Em Andamento', concluido: 'Concluído' };
-            return map[status] || status;
         }
 
         function showToast(msg) {

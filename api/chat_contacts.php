@@ -1,31 +1,32 @@
 <?php
-// api/chat_contacts.php - Obter Lista de Contactos para o Chat
+// api/chat_contacts.php - Lista todas as pessoas do sistema para o chat
 session_start();
 ob_start();
 require_once 'db.php';
+require_once 'security_helpers.php';
 
 header('Content-Type: application/json');
 
-$user_id = $_SESSION['user_id'] ?? null;
+$user_id = meckRequireLogin(true);
+$viewerRole = meckCurrentRole();
+$isStaff = meckIsStaff($viewerRole);
 
-if (!$user_id) {
-    ob_end_clean();
-    http_response_code(401);
-    echo json_encode(['error' => 'Não autorizado']);
-    exit;
-}
+$roleLabels = [
+    'admin' => 'Administrador',
+    'rh' => 'Recursos Humanos',
+    'supervisor' => 'Supervisor',
+    'estagiario' => 'Colaborador',
+];
 
 try {
-    // 0. Ensure tables exist
-    $pdo->exec("CREATE TABLE IF NOT EXISTS groups (
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `groups` (
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(100) NOT NULL,
         description TEXT,
         department VARCHAR(100),
         supervisor_id INT,
         created_by INT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )");
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS group_members (
@@ -33,8 +34,6 @@ try {
         group_id INT NOT NULL,
         intern_id INT NOT NULL,
         added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
-        FOREIGN KEY (intern_id) REFERENCES interns(id) ON DELETE CASCADE,
         UNIQUE KEY(group_id, intern_id)
     )");
 
@@ -50,43 +49,115 @@ try {
         is_read BOOLEAN DEFAULT FALSE
     )");
 
-    // Ensure group_id column exists in chat_messages if not already there
     $colsChat = $pdo->query("SHOW COLUMNS FROM chat_messages")->fetchAll(PDO::FETCH_COLUMN);
-    if (!in_array('group_id', $colsChat)) {
+    if (!in_array('group_id', $colsChat, true)) {
         $pdo->exec("ALTER TABLE chat_messages ADD COLUMN group_id INT DEFAULT NULL AFTER receiver_id");
         $pdo->exec("ALTER TABLE chat_messages MODIFY receiver_id INT NULL");
     }
 
-    // Check if photo_url exists in users table
-    $stmtCheck = $pdo->query("SHOW COLUMNS FROM users LIKE 'photo_url'");
-    $hasPhotoUrl = $stmtCheck->fetch() ? true : false;
-    
-    $photoColumn = $hasPhotoUrl ? "u.photo_url" : "NULL as photo_url";
+    $colsUsers = $pdo->query("SHOW COLUMNS FROM users")->fetchAll(PDO::FETCH_COLUMN);
+    $photoColumn = in_array('photo_url', $colsUsers, true) ? 'u.photo_url' : 'NULL AS photo_url';
+    $deptColumn = in_array('department', $colsUsers, true) ? 'u.department' : 'NULL AS department';
 
-    // 1. Fetch Users
+    // Todas as pessoas do sistema (exceto o utilizador atual)
     $stmtUsers = $pdo->prepare("
-        SELECT u.id, u.name, u.role, $photoColumn, 'individual' as type,
-               (SELECT COUNT(*) FROM chat_messages m WHERE m.sender_id = u.id AND m.receiver_id = ? AND m.is_read = FALSE) as unread_count
+        SELECT
+            u.id,
+            u.name,
+            u.email,
+            u.role,
+            $photoColumn,
+            $deptColumn,
+            'individual' AS type,
+            (
+                SELECT COUNT(*)
+                FROM chat_messages m
+                WHERE m.sender_id = u.id
+                  AND m.receiver_id = ?
+                  AND m.is_read = FALSE
+            ) AS unread_count
         FROM users u
         WHERE u.id != ?
-        ORDER BY name ASC
+        ORDER BY
+            FIELD(u.role, 'admin', 'rh', 'supervisor', 'estagiario'),
+            u.name ASC
     ");
     $stmtUsers->execute([$user_id, $user_id]);
-    $contacts = $stmtUsers->fetchAll(PDO::FETCH_ASSOC);
+    $people = $stmtUsers->fetchAll(PDO::FETCH_ASSOC);
 
-    // 2. Fetch Groups
-    // Let everyone see all groups to ensure the chat works exactly like the admin profile
-    $stmtGroups = $pdo->query("SELECT id, name, 'Grupo de Trabalho' as role, '' as photo_url, 'group' as type, 0 as unread_count FROM groups ORDER BY name ASC");
-    $groups = $stmtGroups->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Combine both lists
-    $all_contacts = array_merge($groups, $contacts);
-    
-    echo json_encode(['success' => true, 'contacts' => $all_contacts]);
+    foreach ($people as &$person) {
+        $person['id'] = (int)$person['id'];
+        $person['unread_count'] = (int)$person['unread_count'];
+        $person['role_label'] = $roleLabels[$person['role']] ?? ucfirst((string)$person['role']);
+        $person['photo_url'] = $person['photo_url'] ?: null;
+        // Evitar enumeração de emails por colaboradores
+        if (!$isStaff) {
+            $person['email'] = null;
+        }
+    }
+    unset($person);
+
+    // Grupos (staff: todos; colaboradores: só grupos onde participam)
+    $groups = [];
+    try {
+        if ($isStaff) {
+            $stmtGroups = $pdo->query("
+                SELECT
+                    id,
+                    name,
+                    'Grupo de Trabalho' AS role,
+                    'Grupo de Trabalho' AS role_label,
+                    NULL AS email,
+                    NULL AS department,
+                    NULL AS photo_url,
+                    'group' AS type,
+                    0 AS unread_count
+                FROM `groups`
+                ORDER BY name ASC
+            ");
+            $groups = $stmtGroups->fetchAll(PDO::FETCH_ASSOC);
+        } else {
+            $stmtGroups = $pdo->prepare("
+                SELECT DISTINCT
+                    g.id,
+                    g.name,
+                    'Grupo de Trabalho' AS role,
+                    'Grupo de Trabalho' AS role_label,
+                    NULL AS email,
+                    NULL AS department,
+                    NULL AS photo_url,
+                    'group' AS type,
+                    0 AS unread_count
+                FROM `groups` g
+                LEFT JOIN group_members gm ON gm.group_id = g.id
+                LEFT JOIN interns i ON i.id = gm.intern_id
+                WHERE g.created_by = ? OR g.supervisor_id = ? OR i.user_id = ?
+                ORDER BY g.name ASC
+            ");
+            $stmtGroups->execute([$user_id, $user_id, $user_id]);
+            $groups = $stmtGroups->fetchAll(PDO::FETCH_ASSOC);
+        }
+        foreach ($groups as &$g) {
+            $g['id'] = (int)$g['id'];
+            $g['unread_count'] = (int)$g['unread_count'];
+        }
+        unset($g);
+    } catch (PDOException $e) {
+        $groups = [];
+    }
+
+    // Pessoas primeiro, depois grupos
+    $all_contacts = array_merge($people, $groups);
+
+    echo json_encode([
+        'success' => true,
+        'contacts' => $all_contacts,
+        'people_count' => count($people),
+        'groups_count' => count($groups),
+    ], JSON_UNESCAPED_UNICODE);
 } catch (PDOException $e) {
     ob_end_clean();
     http_response_code(500);
     echo json_encode(['error' => 'Erro ao buscar contactos: ' . $e->getMessage()]);
 }
 ob_end_flush();
-?>

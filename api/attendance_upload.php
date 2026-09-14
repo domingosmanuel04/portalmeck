@@ -8,6 +8,10 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] === 'estagiario') {
 }
 
 require_once 'db.php';
+require_once 'security_helpers.php';
+
+meckRequireLogin(true);
+meckRequireCsrf(true);
 
 header('Content-Type: application/json');
 

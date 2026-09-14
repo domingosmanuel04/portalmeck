@@ -2,6 +2,11 @@
 // api/ticket_respond.php - RH/Admin respond to a ticket
 session_start();
 require_once 'db.php';
+require_once 'security_helpers.php';
+
+
+meckRequireLogin(true);
+meckRequireCsrf(true);
 
 header('Content-Type: application/json');
 
@@ -65,7 +70,7 @@ try {
 
     // Send notification to intern
     $internUserId = $ticket['intern_id'];
-    $internName = $ticket['intern_name'] ?? 'Estagiário';
+    $internName = $ticket['intern_name'] ?? 'Colaborador';
     $ticketSubject = $ticket['subject'] ?? 'Chamado';
 
     // Status labels

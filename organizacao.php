@@ -42,7 +42,7 @@ try {
     <?php include 'components/head_tags.php'; ?>
     <style>
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             background-color: #101622;
         }
     </style>
@@ -58,8 +58,6 @@ try {
         <!-- Content -->
         <div class="flex-1 flex flex-col overflow-hidden">
             <header class="flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
-                <button @click="sidebarOpen = true" class="text-gray-400 focus:outline-none md:hidden"><i
-                        class="fa-solid fa-bars text-xl"></i></button>
                 <div class="flex-1 flex justify-between px-4">
                     <h1 class="text-2xl font-semibold text-white">Estrutura Organizacional</h1>
                     <?php include 'components/header_user.php'; ?>
@@ -186,7 +184,7 @@ try {
                                     Cancelar
                                 </button>
                                 <button @click="saveOrg"
-                                    class="py-2.5 px-8 rounded-lg font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-900/20 transition active:scale-95 flex items-center gap-2">
+                                    class="btn btn-primary py-2.5 px-8 rounded-lg font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-900/20 transition active:scale-95 flex items-center gap-2">
                                     <i class="fa-solid fa-save"></i>
                                     <span x-text="editMode ? 'Guardar' : 'Salvar'"></span>
                                 </button>

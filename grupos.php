@@ -65,7 +65,7 @@ if ($role !== 'estagiario') {
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <?php include 'components/head_tags.php'; ?>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #101622; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #101622; }
         [x-cloak] { display: none !important; }
     </style>
 </head>
@@ -81,11 +81,8 @@ if ($role !== 'estagiario') {
         <div class="flex-1 flex flex-col overflow-hidden">
 
             <header class="flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
-                <button @click="sidebarOpen = true" class="text-gray-400 focus:outline-none md:hidden">
-                    <i class="fa-solid fa-bars text-xl"></i>
-                </button>
                 <div class="flex-1 flex justify-between">
-                    <h1 class="text-2xl font-semibold text-white hidden md:block">Grupos de Estagiários</h1>
+                    <h1 class="text-2xl font-semibold text-white hidden md:block">Grupos de Colaboradores</h1>
                     <?php include 'components/header_user.php'; ?>
                 </div>
             </header>
@@ -111,7 +108,7 @@ if ($role !== 'estagiario') {
 
                             <?php if ($role !== 'estagiario'): ?>
                                 <button x-show="canCreateGroup()" @click="openModal()" 
-                                        class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 active:scale-95">
+                                        class="btn btn-primary w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 active:scale-95">
                                         <i class="fa-solid fa-plus mr-1"></i> Novo Grupo
                                 </button>
                             <?php endif; ?>
@@ -148,7 +145,7 @@ if ($role !== 'estagiario') {
 
                                 <div class="flex justify-between items-center pt-4 border-t border-slate-800">
                                     <div class="flex flex-col">
-                                        <span class="text-xs font-bold text-blue-400" x-text="`${group.members.length} Estagiários`"></span>
+                                        <span class="text-xs font-bold text-blue-400" x-text="`${group.members.length} Colaboradores`"></span>
                                         <span class="text-[10px] text-slate-500 mt-1" x-text="`Supervisor: ${group.supervisor_name}`"></span>
                                     </div>
                                     <button @click="editGroup(group)" class="text-xs font-bold text-slate-400 hover:text-white transition-colors" x-text="'<?= $role === 'estagiario' ? 'Ver Detalhes' : 'Detalhes' ?>'"></button>
@@ -182,7 +179,7 @@ if ($role !== 'estagiario') {
                                     <template x-for="p in pagination.totalPages" :key="p">
                                         <button x-show="p === 1 || p === pagination.totalPages || (p >= pagination.currentPage - 1 && p <= pagination.currentPage + 1)"
                                             @click="changePage(p)"
-                                            :class="p === pagination.currentPage ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-slate-800/50 text-slate-400 hover:bg-slate-800'"
+                                            :class="btn btn-primary p === pagination.currentPage ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-slate-800/50 text-slate-400 hover:bg-slate-800'"
                                             class="w-10 h-10 rounded-xl transition-all font-bold text-xs flex items-center justify-center"
                                             x-text="p">
                                         </button>
@@ -263,7 +260,7 @@ if ($role !== 'estagiario') {
                                             <select x-model="groupForm.intern_ids" multiple required
                                                     class="w-full bg-slate-900 border-2 border-slate-800 rounded-xl p-3 text-white focus:border-blue-500 focus:ring-0 transition-all font-medium custom-scrollbar min-h-[150px]">
                                                 <?php foreach ($interns_list as $int): ?>
-                                                    <option value="<?= $int['id'] ?>" class="p-2 hover:bg-blue-600">
+                                                    <option value="<?= $int['id'] ?>" class="btn btn-primary p-2 hover:bg-blue-600">
                                                         <?= htmlspecialchars($int['name']) ?>
                                                     </option>
                                                 <?php endforeach; ?>
@@ -276,7 +273,7 @@ if ($role !== 'estagiario') {
                                 <div class="mt-8 flex justify-end gap-3">
                                     <button type="button" @click="modalOpen = false" class="px-6 py-3 font-bold text-slate-500 hover:text-slate-400 transition"><i class="fa-solid fa-xmark mr-1"></i> <span x-text="role === 'estagiario' ? 'Fechar' : 'Cancelar'"></span></button>
                                     <button x-show="role !== 'estagiario'" type="submit" 
-                                            class="px-10 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-900/20 active:scale-95 flex items-center gap-2">
+                                            class="btn btn-primary px-10 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-900/20 active:scale-95 flex items-center gap-2">
                                         <i x-show="loading" class="fa-solid fa-circle-notch fa-spin mr-1"></i>
                                         <i x-show="!loading" class="fa-solid fa-floppy-disk mr-1"></i>
                                         <span x-text="loading ? 'A processar...' : (isEditing ? 'Atualizar' : 'Criar')"></span>

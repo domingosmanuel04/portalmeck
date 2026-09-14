@@ -6,7 +6,12 @@ ini_set('display_errors', 0);
 
 session_start();
 require_once 'db.php';
+require_once 'security_helpers.php';
 require_once 'notifications_helper.php';
+
+
+meckRequireLogin(true);
+meckRequireCsrf(true);
 
 header('Content-Type: application/json');
 

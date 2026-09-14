@@ -45,7 +45,7 @@ try {
 
         if ($me) {
             // Count total for pagination
-            $countQuery = "SELECT COUNT(*) FROM users WHERE role = 'supervisor' AND internship_area = ? AND department = ?";
+            $countQuery = "SELECT COUNT(*) FROM users WHERE role IN ('supervisor','tecnico') AND internship_area = ? AND department = ?";
             $countParams = [$me['internship_area'], $me['department']];
             if ($search) {
                 $countQuery .= " AND (name LIKE ? OR email LIKE ? OR department LIKE ? OR internship_area LIKE ?)";
@@ -55,7 +55,7 @@ try {
             $stmtCount->execute($countParams);
             $totalRecords = $stmtCount->fetchColumn();
 
-            $query = "SELECT id, name, email, phone, department, internship_area, created_at, photo_url FROM users WHERE role = 'supervisor' AND internship_area = ? AND department = ?";
+            $query = "SELECT id, name, email, phone, department, internship_area, created_at, photo_url, role FROM users WHERE role IN ('supervisor','tecnico') AND internship_area = ? AND department = ?";
             $params = [$me['internship_area'], $me['department']];
             if ($search) {
                 $query .= " AND (name LIKE ? OR email LIKE ? OR department LIKE ? OR internship_area LIKE ?)";
@@ -70,7 +70,7 @@ try {
         }
     } else {
         // Count total for pagination
-        $countQuery = "SELECT COUNT(*) FROM users WHERE role = 'supervisor'";
+        $countQuery = "SELECT COUNT(*) FROM users WHERE role IN ('supervisor','tecnico','rh')";
         $countParams = [];
         if ($search) {
             $countQuery .= " AND (name LIKE ? OR email LIKE ? OR department LIKE ? OR internship_area LIKE ?)";
@@ -80,7 +80,7 @@ try {
         $stmtCount->execute($countParams);
         $totalRecords = $stmtCount->fetchColumn();
 
-        $query = "SELECT id, name, email, phone, department, internship_area, created_at, photo_url FROM users WHERE role = 'supervisor'";
+        $query = "SELECT id, name, email, phone, department, internship_area, created_at, photo_url, role FROM users WHERE role IN ('supervisor','tecnico','rh')";
         $params = [];
         if ($search) {
             $query .= " AND (name LIKE ? OR email LIKE ? OR department LIKE ? OR internship_area LIKE ?)";
@@ -115,7 +115,7 @@ try {
     <?php include 'components/head_tags.php'; ?>
     <style>
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             background-color: #101622;
         }
     </style>
@@ -137,9 +137,6 @@ try {
         <div class="flex-1 flex flex-col overflow-hidden">
 
             <header class="flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
-                <button @click="sidebarOpen = true" class="text-gray-400 focus:outline-none md:hidden">
-                    <i class="fa-solid fa-bars text-xl"></i>
-                </button>
                 <div class="flex-1 flex justify-between">
                     <h1 class="text-2xl font-semibold text-white hidden md:block">Gestão de Supervisores</h1>
                     <?php include 'components/header_user.php'; ?>
@@ -165,7 +162,7 @@ try {
 
                     <?php if ($role !== 'estagiario' && $role !== 'supervisor'): ?>
                         <button @click="resetForm(); modalOpen = true"
-                            class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-5 rounded-lg shadow-md transition-colors flex items-center gap-2">
+                            class="btn btn-primary bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-5 rounded-lg shadow-md transition-colors flex items-center gap-2">
                             <i class="fa-solid fa-plus"></i> Novo Supervisor
                         </button>
                     <?php endif; ?>
@@ -189,7 +186,8 @@ try {
                                         class="w-14 h-14 rounded-xl object-cover ring-2 ring-slate-800">
                                     <div>
                                         <h3 class="font-bold text-white"><?= htmlspecialchars($s['name']) ?></h3>
-                                        <p class="text-xs text-blue-400 font-medium"><?= htmlspecialchars($s['department'] ?: 'Geral') ?></p>
+                                        <p class="text-xs text-blue-400 font-medium"><?= htmlspecialchars($s['department'] ?: 'Geral') ?>
+                                            · <?= htmlspecialchars($s['role'] ?? 'supervisor') ?></p>
                                     </div>
                                 </div>
                                 <?php if ($role !== 'estagiario' && $role !== 'supervisor'): ?>
@@ -295,6 +293,15 @@ try {
                                         <input type="password" x-model="form.password"
                                             class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-white">
                                     </div>
+                                    <div x-show="!isEditing">
+                                        <label class="block text-sm font-medium text-slate-400 mb-1">Papel</label>
+                                        <select x-model="form.role"
+                                            class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-white">
+                                            <option value="supervisor">Supervisor</option>
+                                            <option value="tecnico">Técnico</option>
+                                            <option value="rh">RH</option>
+                                        </select>
+                                    </div>
                                     <div x-show="isEditing">
                                         <label class="block text-sm font-medium text-slate-400 mb-1">Nova Senha</label>
                                         <input type="password" x-model="form.new_password"
@@ -335,7 +342,7 @@ try {
                                     <button type="button" @click="modalOpen = false"
                                         class="py-2.5 px-5 rounded-lg font-bold text-slate-400 bg-slate-800 hover:bg-slate-700 transition">Cancelar</button>
                                     <button type="submit"
-                                        class="py-2.5 px-8 rounded-lg font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition active:scale-95 flex items-center gap-2">
+                                        class="btn btn-primary py-2.5 px-8 rounded-lg font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition active:scale-95 flex items-center gap-2">
                                         <i class="fa-solid fa-save"></i>
                                         <span x-text="isEditing ? 'Atualizar Supervisor' : 'Salvar Supervisor'"></span>
                                     </button>
@@ -447,7 +454,8 @@ try {
                     department: '',
                     internship_area: '',
                     password: 'supervisor123',
-                    new_password: ''
+                    new_password: '',
+                    role: 'supervisor'
                 },
 
                 init() {
@@ -468,7 +476,8 @@ try {
                         department: '',
                         internship_area: '',
                         password: 'supervisor123',
-                        new_password: ''
+                        new_password: '',
+                        role: 'supervisor'
                     };
                 },
 

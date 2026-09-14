@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    role ENUM('admin', 'rh', 'supervisor', 'estagiario') NOT NULL,
+    role ENUM('admin', 'rh', 'supervisor', 'tecnico', 'estagiario', 'funcionario') NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS interns (
     end_date DATE,
     scholarship_amount DECIMAL(10,2) DEFAULT 0.00,
     status ENUM('ativo', 'suspenso', 'concluido') DEFAULT 'ativo',
+    employee_type VARCHAR(32) DEFAULT 'estagiario',
     photo_url VARCHAR(255),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (supervisor_id) REFERENCES users(id) ON DELETE SET NULL

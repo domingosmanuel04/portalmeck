@@ -11,6 +11,7 @@ if (!$userId) {
 }
 
 require_once 'api/db.php';
+require_once 'api/security_helpers.php';
 
 $documentId = $_GET['id'] ?? null;
 if (!$documentId) {
@@ -38,14 +39,17 @@ if (!$document) {
 }
 
 // Verificar permissões
-if ($role === 'estagiario' && $document['intern_user_id'] != $userId) {
+if (in_array($role, ['estagiario', 'funcionario'], true) && (int) $document['intern_user_id'] !== (int) $userId) {
     header('Location: documentos.php');
     exit;
 }
 
 $ext = strtoupper(pathinfo($document['file_path'], PATHINFO_EXTENSION));
-$fileSize = file_exists($document['file_path']) ? filesize($document['file_path']) : 0;
+$absPath = __DIR__ . '/' . ltrim($document['file_path'], '/');
+$fileSize = is_file($absPath) ? filesize($absPath) : 0;
 $fileSizeKB = round($fileSize / 1024, 2);
+$fileUrl = meckFileUrl($document['file_path']);
+$fileDownloadUrl = meckFileUrl($document['file_path'], true);
 
 $categoryLabels = [
     'contrato' => 'Contrato',
@@ -72,16 +76,13 @@ $isExpiring = $document['valid_until'] && strtotime($document['valid_until']) < 
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <?php include 'components/head_tags.php'; ?>
-    <style>body { font-family: 'Inter', sans-serif; background-color: #101622; }</style>
+    <style>body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #101622; }</style>
 </head>
 <body class="h-full antialiased text-slate-200 bg-[#101622]" x-data="documentDetailApp()">
     <div class="flex h-screen overflow-hidden bg-[#101622]">
         <?php include 'components/sidebar.php'; ?>
         <div class="flex-1 flex flex-col overflow-hidden">
             <header class="flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
-                <button @click="sidebarOpen = true" class="text-gray-400 focus:outline-none md:hidden">
-                    <i class="fa-solid fa-bars text-xl"></i>
-                </button>
                 <div class="flex-1 flex justify-between">
                     <h1 class="text-2xl font-semibold text-white hidden md:block">Detalhes do Documento</h1>
                     <div class="flex items-center gap-6 ml-auto">
@@ -104,7 +105,7 @@ $isExpiring = $document['valid_until'] && strtotime($document['valid_until']) < 
                             <div class="bg-slate-900 border border-slate-800 rounded-3xl p-8">
                                 <?php if (strtolower($ext) === 'PDF'): ?>
                                     <div class="aspect-video bg-slate-800 rounded-lg overflow-hidden flex items-center justify-center mb-4">
-                                        <iframe src="<?= htmlspecialchars($document['file_path']) ?>" width="100%" height="100%" style="border:none; border-radius:8px;"></iframe>
+                                        <iframe src="<?= htmlspecialchars($fileUrl) ?>" width="100%" height="100%" style="border:none; border-radius:8px;"></iframe>
                                     </div>
                                 <?php else: ?>
                                     <div class="aspect-video bg-slate-800 rounded-lg overflow-hidden flex flex-col items-center justify-center">
@@ -115,13 +116,13 @@ $isExpiring = $document['valid_until'] && strtotime($document['valid_until']) < 
                                 <?php endif; ?>
                                 <div class="mt-4 flex gap-3">
                                     <?php if (strtolower($ext) === 'PDF'): ?>
-                                        <a href="<?= htmlspecialchars($document['file_path']) ?>" target="_blank" rel="noopener noreferrer"
+                                        <a href="<?= htmlspecialchars($fileUrl) ?>" target="_blank" rel="noopener noreferrer"
                                             class="flex-1 py-3 px-4 rounded-lg font-medium text-white bg-emerald-600 hover:bg-emerald-700 transition flex items-center justify-center gap-2">
                                             <i class="fa-solid fa-eye"></i> Abrir em Nova Aba
                                         </a>
                                     <?php endif; ?>
-                                    <a href="<?= htmlspecialchars($document['file_path']) ?>" download
-                                        class="flex-1 py-3 px-4 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 transition flex items-center justify-center gap-2">
+                                    <a href="<?= htmlspecialchars($fileDownloadUrl) ?>"
+                                        class="btn btn-primary flex-1 py-3 px-4 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 transition flex items-center justify-center gap-2">
                                         <i class="fa-solid fa-download"></i> Baixar
                                     </a>
                                 </div>
@@ -174,7 +175,7 @@ $isExpiring = $document['valid_until'] && strtotime($document['valid_until']) < 
                         <div class="space-y-6">
                             <!-- Informações do Estagiário -->
                             <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6">
-                                <h3 class="text-lg font-semibold text-white mb-4">Estagiário</h3>
+                                <h3 class="text-lg font-semibold text-white mb-4">Colaborador</h3>
                                 <div class="text-center mb-4">
                                     <img src="https://ui-avatars.com/api/?name=<?= urlencode($document['intern_name']) ?>&background=1E293B&color=F8FAFC"
                                         class="w-16 h-16 rounded-full mx-auto mb-2 border border-slate-700">
@@ -191,13 +192,13 @@ $isExpiring = $document['valid_until'] && strtotime($document['valid_until']) < 
                                 <h3 class="text-lg font-semibold text-white mb-4">Ações</h3>
                                 <div class="space-y-2">
                                     <?php if (strtolower($ext) === 'PDF'): ?>
-                                        <a href="<?= htmlspecialchars($document['file_path']) ?>" target="_blank" rel="noopener noreferrer"
+                                        <a href="<?= htmlspecialchars($fileUrl) ?>" target="_blank" rel="noopener noreferrer"
                                             class="w-full py-2 px-4 rounded-lg font-medium text-white bg-emerald-600 hover:bg-emerald-700 transition flex items-center justify-center gap-2 text-sm">
                                             <i class="fa-solid fa-eye"></i> Abrir PDF
                                         </a>
                                     <?php endif; ?>
-                                    <a href="<?= htmlspecialchars($document['file_path']) ?>" download
-                                        class="w-full py-2 px-4 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 transition flex items-center justify-center gap-2 text-sm">
+                                    <a href="<?= htmlspecialchars($fileDownloadUrl) ?>"
+                                        class="btn btn-primary w-full py-2 px-4 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 transition flex items-center justify-center gap-2 text-sm">
                                         <i class="fa-solid fa-download"></i> Baixar
                                     </a>
                                     <?php if ($role === 'admin' || $role === 'rh'): ?>

@@ -20,6 +20,8 @@ $evaluations = [];
 $nextEvaluationDate = null;
 $search = $_GET['search'] ?? '';
 $searchParam = "%$search%";
+$totalRecords = 0;
+$totalPages = 0;
 
 // Pagination settings
 $limit = 10;
@@ -77,11 +79,9 @@ try {
             } else {
                 $nextEvaluationDate = date('Y-m-01', strtotime('+1 month'));
             }
-        } else {
-            $totalRecords = 0;
         }
     } else {
-        // Admin/RH/Supervisor see all
+        // Admin/RH: todas | Supervisor: as suas + dos seus estagiários
         $countQuery = "
             SELECT COUNT(*)
             FROM evaluations e
@@ -91,9 +91,14 @@ try {
             WHERE 1=1
         ";
         $countParams = [];
+        if ($role === 'supervisor') {
+            $countQuery .= " AND (e.supervisor_id = ? OR i.supervisor_id = ?)";
+            $countParams[] = $userId;
+            $countParams[] = $userId;
+        }
         if ($search) {
             $countQuery .= " AND (ui.name LIKE ? OR i.course LIKE ? OR i.department LIKE ? OR us.name LIKE ?)";
-            $countParams = [$searchParam, $searchParam, $searchParam, $searchParam];
+            array_push($countParams, $searchParam, $searchParam, $searchParam, $searchParam);
         }
         $stmtCount = $pdo->prepare($countQuery);
         $stmtCount->execute($countParams);
@@ -108,10 +113,15 @@ try {
             WHERE 1=1
         ";
         $params = [];
+        if ($role === 'supervisor') {
+            $query .= " AND (e.supervisor_id = ? OR i.supervisor_id = ?)";
+            $params[] = $userId;
+            $params[] = $userId;
+        }
 
         if ($search) {
             $query .= " AND (ui.name LIKE ? OR i.course LIKE ? OR i.department LIKE ? OR us.name LIKE ?)";
-            $params = [$searchParam, $searchParam, $searchParam, $searchParam];
+            array_push($params, $searchParam, $searchParam, $searchParam, $searchParam);
         }
 
         $query .= " ORDER BY e.evaluation_month DESC LIMIT $limit OFFSET $offset";
@@ -120,44 +130,53 @@ try {
         $evaluations = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    $totalPages = ceil($totalRecords / $limit);
+    $totalPages = $totalRecords > 0 ? (int) ceil($totalRecords / $limit) : 0;
 } catch (PDOException $e) {
     $evaluations = [];
     $totalRecords = 0;
     $totalPages = 0;
+    error_log('avaliacoes list: ' . $e->getMessage());
 }
 
 $interns_list = [];
 if ($role !== 'estagiario') {
-    if ($role === 'supervisor') {
-        // Only interns in supervisor's area
-        $stmtInt = $pdo->prepare("
-            SELECT i.id, u.name 
-            FROM interns i 
-            JOIN users u ON i.user_id = u.id 
-            WHERE i.internship_area = ? AND i.department = ?
-            ORDER BY u.name ASC
-        ");
-        $stmtInt->execute([$currentUser['internship_area'], $currentUser['department']]);
-        $interns_list = $stmtInt->fetchAll(PDO::FETCH_ASSOC);
-        
-        // If no interns found, show all
-        if (empty($interns_list)) {
+    try {
+        if ($role === 'supervisor') {
+            $stmtInt = $pdo->prepare("
+                SELECT i.id, u.name, i.department, i.internship_area
+                FROM interns i
+                JOIN users u ON i.user_id = u.id
+                WHERE i.status = 'ativo'
+                  AND (i.employee_type = 'estagiario' OR u.role = 'estagiario')
+                  AND (i.supervisor_id = ? OR i.supervisor_id IS NULL)
+                ORDER BY u.name ASC
+            ");
+            $stmtInt->execute([$userId]);
+            $interns_list = $stmtInt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Se ainda vazio, mostrar todos os estagiários activos
+            if (empty($interns_list)) {
+                $interns_list = $pdo->query("
+                    SELECT i.id, u.name, i.department, i.internship_area
+                    FROM interns i
+                    JOIN users u ON i.user_id = u.id
+                    WHERE i.status = 'ativo'
+                      AND (i.employee_type = 'estagiario' OR u.role = 'estagiario')
+                    ORDER BY u.name ASC
+                ")->fetchAll(PDO::FETCH_ASSOC);
+            }
+        } else {
             $interns_list = $pdo->query("
-                SELECT i.id, u.name 
-                FROM interns i 
-                JOIN users u ON i.user_id = u.id 
+                SELECT i.id, u.name, i.department, i.internship_area
+                FROM interns i
+                JOIN users u ON i.user_id = u.id
+                WHERE i.status = 'ativo'
+                  AND (i.employee_type = 'estagiario' OR u.role = 'estagiario')
                 ORDER BY u.name ASC
             ")->fetchAll(PDO::FETCH_ASSOC);
         }
-    } else {
-        // Admin/RH sees everyone
-        $interns_list = $pdo->query("
-            SELECT i.id, u.name 
-            FROM interns i 
-            JOIN users u ON i.user_id = u.id 
-            ORDER BY u.name ASC
-        ")->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        $interns_list = [];
     }
 }
 ?>
@@ -174,7 +193,7 @@ if ($role !== 'estagiario') {
     <?php include 'components/head_tags.php'; ?>
     <style>
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             background-color: #101622;
         }
     </style>
@@ -192,9 +211,6 @@ if ($role !== 'estagiario') {
         <div class="flex-1 flex flex-col overflow-hidden">
 
             <header class="flex items-center justify-between px-6 py-8 bg-[#101622] border-b border-slate-800">
-                <button @click="sidebarOpen = true" class="text-gray-400 focus:outline-none md:hidden">
-                    <i class="fa-solid fa-bars text-xl"></i>
-                </button>
                 <div class="flex-1 flex justify-between">
                     <h1 class="text-2xl font-semibold text-white hidden md:block">Avaliação de Desempenho</h1>
                     <div class="flex items-center gap-6 ml-auto">
@@ -222,9 +238,9 @@ if ($role !== 'estagiario') {
                             <?php endif; ?>
                         </form>
 
-                        <?php if ($role === 'supervisor' || $role === 'admin'): ?>
+                        <?php if (in_array($role, ['supervisor', 'admin', 'rh'], true)): ?>
                             <button @click="modalOpen = true"
-                                class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-5 rounded-lg shadow-md transition-colors flex items-center gap-2">
+                                class="btn btn-primary bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-5 rounded-lg shadow-md transition-colors flex items-center gap-2">
                                 <i class="fa-solid fa-plus mr-1"></i> Nova Avaliação
                             </button>
                         <?php endif; ?>
@@ -279,13 +295,19 @@ if ($role !== 'estagiario') {
                         <div
                             class="col-span-full py-12 text-center bg-[#101622] rounded-2xl border-2 border-dashed border-slate-800">
                             <i class="fa-solid fa-star-half-stroke text-4xl text-slate-700 mb-3"></i>
-                            <p class="text-slate-500">Nenhuma avaliação encontrada.</p>
+                            <p class="text-slate-400 font-medium mb-1">Ainda não há avaliações registadas.</p>
+                            <p class="text-slate-500 text-sm mb-4">Crie a primeira avaliação mensal com dados reais do estagiário.</p>
+                            <?php if (in_array($role, ['admin', 'supervisor', 'rh'], true)): ?>
+                                <button @click="modalOpen = true" class="btn btn-primary px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold">
+                                    <i class="fa-solid fa-plus mr-1"></i> Nova Avaliação
+                                </button>
+                            <?php endif; ?>
                         </div>
                     <?php endif; ?>
 
                     <?php foreach ($evaluations as $e):
                         $internName = $e['intern_name'] ?? $_SESSION['name'];
-                        $roleDisplay = $e['course'] ?? 'Estagiário';
+                        $roleDisplay = $e['course'] ?? 'Colaborador';
                         $deptDisplay = $e['department'] ?? '';
                         ?>
                         <!-- Evaluation Card -->
@@ -388,13 +410,21 @@ if ($role !== 'estagiario') {
                                 <div class="grid grid-cols-2 gap-4 mb-6">
                                     <div>
                                         <label class="block text-sm font-medium text-slate-300 mb-1">Selecionar
-                                            Estagiário *</label>
+                                            Colaborador *</label>
                                         <select x-model="selectedIntern"
                                             class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:ring-blue-500 shadow-sm" required>
-                                            <option value="" class="bg-[#101622]">Selecionar Estagiário...</option>
+                                            <option value="" class="bg-[#101622]">Selecionar colaborador...</option>
                                             <?php foreach ($interns_list as $int): ?>
-                                                <option value="<?= $int['id'] ?>" class="bg-[#101622]"><?= htmlspecialchars($int['name']) ?></option>
+                                                <option value="<?= $int['id'] ?>" class="bg-[#101622]">
+                                                    <?= htmlspecialchars($int['name']) ?>
+                                                    <?php if (!empty($int['department'])): ?>
+                                                        — <?= htmlspecialchars($int['department']) ?>
+                                                    <?php endif; ?>
+                                                </option>
                                             <?php endforeach; ?>
+                                            <?php if (empty($interns_list)): ?>
+                                                <option value="" disabled class="bg-[#101622]">Sem colaboradores activos</option>
+                                            <?php endif; ?>
                                         </select>
                                     </div>
                                     <div>
@@ -501,7 +531,7 @@ if ($role !== 'estagiario') {
                                     <button type="button" @click="$dispatch('close-modal')"
                                         class="py-2 px-5 rounded-lg font-medium text-slate-400 bg-slate-800 hover:bg-slate-700 transition"><i class="fa-solid fa-xmark mr-1"></i> Cancelar</button>
                                     <button type="submit"
-                                        class="py-2 px-6 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 transition shadow-lg shadow-blue-500/30 flex items-center gap-2">
+                                        class="btn btn-primary py-2 px-6 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 transition shadow-lg shadow-blue-500/30 flex items-center gap-2">
                                         <i class="fa-solid fa-check mr-1"></i> Finalizar
                                     </button>
                                 </div>
@@ -556,8 +586,9 @@ if ($role !== 'estagiario') {
             return {
                 criteria: { punt: 5, comp: 5, prod: 5, team: 5, tech: 5, learn: 5, teorica: 2.5, pratica: 2.5 },
                 selectedIntern: '',
-                selectedMonth: '',
+                selectedMonth: '<?= date('Y-m') ?>',
                 comments: '',
+                submitting: false,
                 calculaMedia() {
                     let total = parseInt(this.criteria.punt || 0) + parseInt(this.criteria.comp || 0) + parseInt(this.criteria.prod || 0) + parseInt(this.criteria.team || 0) + parseInt(this.criteria.tech || 0) + parseInt(this.criteria.learn || 0);
                     let count = 6;
@@ -568,6 +599,7 @@ if ($role !== 'estagiario') {
                     return notaFinal ? notaFinal.toFixed(1) : '0.0';
                 },
                 async handleSubmit() {
+                    if (this.submitting) return;
                     if (!this.selectedIntern) {
                         MeckNotifications.warning('Aviso', 'Por favor selecione um estagiário.');
                         return;
@@ -577,6 +609,7 @@ if ($role !== 'estagiario') {
                         return;
                     }
                     
+                    this.submitting = true;
                     const formData = new FormData();
                     formData.append('intern_id', this.selectedIntern);
                     formData.append('evaluation_month', this.selectedMonth);
@@ -593,19 +626,26 @@ if ($role !== 'estagiario') {
                     try {
                         const res = await fetch('api/evaluation_create.php', {
                             method: 'POST',
-                            body: formData
+                            body: formData,
+                            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
                         });
-                        const result = await res.json();
+                        const raw = await res.text();
+                        let result = {};
+                        try { result = JSON.parse(raw); } catch (e) {
+                            throw new Error(raw.slice(0, 180) || 'Resposta inválida do servidor');
+                        }
                         if (result.success) {
                             MeckNotifications.success('Sucesso', 'Avaliação criada com sucesso!');
                             this.$dispatch('close-modal');
-                            setTimeout(() => location.reload(), 1500);
+                            setTimeout(() => location.reload(), 800);
                         } else {
                             MeckNotifications.error('Erro', result.error || 'Erro ao criar avaliação.');
                         }
                     } catch (error) {
                         MeckNotifications.error('Erro', 'Erro de conexão: ' + error.message);
                         console.error('Erro:', error);
+                    } finally {
+                        this.submitting = false;
                     }
                 }
             }

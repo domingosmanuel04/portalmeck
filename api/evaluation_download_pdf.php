@@ -1,16 +1,12 @@
 <?php
 // api/evaluation_download_pdf.php - Download de Avaliação em PDF
+require_once __DIR__ . '/security_helpers.php';
+meckConfigureSession();
 session_start();
-require_once 'db.php';
+require_once __DIR__ . '/db.php';
 
-// Verificar autorização
-$userId = $_SESSION['user_id'] ?? null;
-$role = $_SESSION['role'] ?? 'guest';
-
-if (!$userId) {
-    http_response_code(403);
-    exit('Acesso Negado');
-}
+$userId = meckRequireLogin(false);
+$role = meckCurrentRole();
 
 $evaluationId = $_GET['id'] ?? null;
 if (!$evaluationId) {
@@ -45,8 +41,16 @@ if (!$evaluation) {
     exit('Avaliação não encontrada');
 }
 
-// Verificar se o usuário tem permissão (próprio estagiário, supervisor ou admin/rh)
-if ($role === 'estagiario' && $evaluation['intern_user_id'] != $userId && $evaluation['supervisor_id'] != $userId) {
+// Verificar se o usuário tem permissão (próprio colaborador, supervisor ou admin/rh)
+$isOwner = ((int) $evaluation['intern_user_id'] === (int) $userId);
+$isEvaluator = ((int) ($evaluation['supervisor_id'] ?? 0) === (int) $userId);
+$isStaff = in_array($role, ['admin', 'rh', 'supervisor'], true);
+
+if (in_array($role, ['estagiario', 'funcionario'], true) && !$isOwner) {
+    http_response_code(403);
+    exit('Acesso Negado');
+}
+if (!$isStaff && !$isOwner && !$isEvaluator) {
     http_response_code(403);
     exit('Acesso Negado');
 }
@@ -88,7 +92,7 @@ $html = '
                 <th style="width: 70%;">Valor</th>
             </tr>
             <tr>
-                <td><strong>Estagiário</strong></td>
+                <td><strong>Colaborador</strong></td>
                 <td>' . htmlspecialchars($evaluation['intern_name']) . '</td>
             </tr>
             <tr>

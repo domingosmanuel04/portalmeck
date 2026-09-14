@@ -4,10 +4,12 @@
 
 if (!isset($currentUser)) {
     try {
-        // Check if photo_url exists to avoid crash
-        $colsUsers = $pdo->query("SHOW COLUMNS FROM users")->fetchAll(PDO::FETCH_COLUMN);
-        $photoCol = in_array('photo_url', $colsUsers) ? "u.photo_url" : "NULL as photo_url";
-        $phoneCol = in_array('phone', $colsUsers) ? "u.phone" : "NULL as phone";
+        if (!isset($GLOBALS['__meck_user_cols'])) {
+            $GLOBALS['__meck_user_cols'] = $pdo->query('SHOW COLUMNS FROM users')->fetchAll(PDO::FETCH_COLUMN);
+        }
+        $meckUserCols = $GLOBALS['__meck_user_cols'];
+        $photoCol = in_array('photo_url', $meckUserCols, true) ? 'u.photo_url' : 'NULL as photo_url';
+        $phoneCol = in_array('phone', $meckUserCols, true) ? 'u.phone' : 'NULL as phone';
 
         $stmt = $pdo->prepare("
             SELECT u.id, u.name, u.email, u.role, $photoCol, $phoneCol, i.id as intern_id, i.address
@@ -55,7 +57,8 @@ $role = $_SESSION['role'] ?? 'estagiario';
                                   'fa-circle-check text-emerald-500': n.type === 'success',
                                   'fa-circle-info text-blue-500': n.type === 'info',
                                   'fa-triangle-exclamation text-amber-500': n.type === 'warning',
-                                  'fa-circle-xmark text-red-500': n.type === 'error'
+                                  'fa-circle-xmark text-red-500': n.type === 'error',
+                                  'fa-video text-cyan-400': parseMeta(n).kind === 'meeting_invite'
                                 }"></i>
                         </div>
                         <div class="min-w-0 flex-1">
@@ -63,6 +66,22 @@ $role = $_SESSION['role'] ?? 'estagiario';
                             <p class="text-xs text-slate-400 mt-0.5" x-text="n.message"></p>
                             <p class="text-[10px] text-slate-500 mt-1 uppercase"
                                 x-text="new Date(n.created_at).toLocaleDateString()"></p>
+                            <div class="flex flex-wrap gap-2 mt-2" x-show="parseMeta(n).kind === 'meeting_invite' && parseMeta(n).meeting_id">
+                                <button type="button"
+                                    @click.stop="respondMeetingInvite(parseMeta(n).meeting_id, 'accept')"
+                                    class="px-2.5 py-1 rounded-lg text-[11px] font-semibold text-white"
+                                    style="background-image: linear-gradient(135deg, #22d3ee, #c026ff)">
+                                    Aceitar
+                                </button>
+                                <button type="button"
+                                    @click.stop="respondMeetingInvite(parseMeta(n).meeting_id, 'decline')"
+                                    class="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-800 text-slate-300">
+                                    Recusar
+                                </button>
+                            </div>
+                            <a x-show="n.action_url && parseMeta(n).kind !== 'meeting_invite'"
+                               :href="n.action_url"
+                               class="inline-block mt-2 text-[11px] text-cyan-300 hover:underline">Abrir</a>
                         </div>
                     </div>
                 </template>
@@ -275,7 +294,17 @@ $role = $_SESSION['role'] ?? 'estagiario';
                 unreadCount: 0,
                 init() {
                     this.fetchNotifications();
-                    setInterval(() => this.fetchNotifications(), 30000);
+                    setInterval(() => this.fetchNotifications(), 15000);
+                },
+                parseMeta(n) {
+                    if (!n) return {};
+                    if (n._metaObj) return n._metaObj;
+                    try {
+                        n._metaObj = n.meta ? (typeof n.meta === 'string' ? JSON.parse(n.meta) : n.meta) : {};
+                    } catch (e) {
+                        n._metaObj = {};
+                    }
+                    return n._metaObj || {};
                 },
                 async fetchNotifications() {
                     try {
@@ -284,6 +313,35 @@ $role = $_SESSION['role'] ?? 'estagiario';
                         this.notifications = d.notifications || [];
                         this.unreadCount = d.unreadCount || 0;
                     } catch (e) { }
+                },
+                async respondMeetingInvite(meetingId, action) {
+                    try {
+                        const r = await fetch('api/meeting_respond.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ meeting_id: meetingId, action })
+                        });
+                        const d = await r.json();
+                        if (!d.success) {
+                            if (typeof MeckNotifications !== 'undefined') {
+                                MeckNotifications.error('Erro', d.error || 'Falha ao responder');
+                            }
+                            return;
+                        }
+                        this.show = false;
+                        if (action === 'accept') {
+                            window.location.href = 'reuniao.php?id=' + meetingId;
+                        } else {
+                            if (typeof MeckNotifications !== 'undefined') {
+                                MeckNotifications.toast('Convite recusado');
+                            }
+                            this.fetchNotifications();
+                        }
+                    } catch (e) {
+                        if (typeof MeckNotifications !== 'undefined') {
+                            MeckNotifications.error('Erro', 'Falha de ligação');
+                        }
+                    }
                 },
                 async toggle() {
                     this.show = !this.show;

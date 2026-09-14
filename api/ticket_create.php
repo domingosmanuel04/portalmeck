@@ -2,7 +2,11 @@
 // api/ticket_create.php - Intern opens an HR ticket
 session_start();
 require_once 'db.php';
+require_once 'security_helpers.php';
 require_once 'notifications_helper.php';
+
+meckRequireLogin(false);
+meckRequireCsrf(false);
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header("Location: ../chamados.php?error=" . urlencode("M%C3%A9todo n%C3%A3o permitido."));
@@ -17,9 +21,9 @@ if (!$userId) {
     exit;
 }
 
-// Only interns open tickets (admins/RH manage them)
-if ($role !== 'estagiario') {
-    header("Location: ../chamados.php?error=" . urlencode("Apenas estagi%C3%A1rios podem abrir chamados."));
+// Colaboradores abrem chamados RH; staff gere
+if (!in_array($role, ['estagiario', 'funcionario'], true)) {
+    header("Location: ../chamados.php?error=" . urlencode("Apenas colaboradores podem abrir chamados."));
     exit;
 }
 
@@ -62,7 +66,7 @@ try {
     $stmtStaff->execute();
     $staffList = $stmtStaff->fetchAll();
     
-    $internName = $_SESSION['user_name'] ?? 'Um estagiário';
+    $internName = $_SESSION['user_name'] ?? 'Um colaborador';
     foreach ($staffList as $staff) {
         createNotification(
             $pdo, 

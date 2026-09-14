@@ -2,6 +2,11 @@
 // api/attendance_create.php - Registo de Presenças
 session_start();
 require_once 'db.php';
+require_once 'security_helpers.php';
+
+
+meckRequireLogin(true);
+meckRequireCsrf(true);
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -23,7 +28,7 @@ if ($action === 'picar_ponto_entrada') {
     $internProfile = $stmtLookup->fetch();
 
     if (!$internProfile) {
-        die("Perfil de estagiário não associado a esta conta.");
+        die("Perfil de colaborador não associado a esta conta.");
     }
 
     $intern_id = $internProfile['id'];
@@ -44,7 +49,9 @@ if ($action === 'picar_ponto_entrada') {
     die("Lógica de saída aqui...");
 }
 
-// Manual Registration by Admin/RH...
+// Manual Registration by Admin/RH/Supervisor...
+meckRequireRole(['admin', 'rh', 'supervisor'], false);
+
 $intern_id = $_POST['intern_id'] ?? null;
 $date = $_POST['date'] ?? null;
 $status = $_POST['status'] ?? 'presente';
@@ -65,9 +72,14 @@ if (isset($_FILES['justification_file']) && $_FILES['justification_file']['error
 
     $upload_dir = '../uploads/attendance/';
     if (!is_dir($upload_dir)) {
-        mkdir($upload_dir, 0777, true);
+        mkdir($upload_dir, 0755, true);
     }
-    $filename = uniqid('justification_') . '_' . basename($file['name']);
+    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    $allowedExt = ['pdf', 'jpg', 'jpeg', 'png'];
+    if (!in_array($ext, $allowedExt, true)) {
+        die("Extensão de arquivo não permitida.");
+    }
+    $filename = uniqid('justification_', true) . '.' . $ext;
     $target_path = $upload_dir . $filename;
     if (move_uploaded_file($file['tmp_name'], $target_path)) {
         $justification_file_path = 'uploads/attendance/' . $filename;

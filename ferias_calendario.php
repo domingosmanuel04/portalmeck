@@ -62,7 +62,7 @@ if ($staffInfo && $staffInfo['employee_type'] === 'estagiario' && $staffInfo['en
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <?php include 'components/head_tags.php'; ?>
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
     </style>
 </head>
 
@@ -77,23 +77,20 @@ if ($staffInfo && $staffInfo['employee_type'] === 'estagiario' && $staffInfo['en
             <!-- Top header -->
             <header class="flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
                 <div class="flex items-center gap-4">
-                    <button @click="sidebarOpen = true" class="text-gray-400 focus:outline-none md:hidden">
-                        <i class="fa-solid fa-bars text-xl"></i>
-                    </button>
                     <h1 class="text-xl font-bold text-white hidden md:block">O Meu Calendário</h1>
                 </div>
                 <?php include 'components/header_user.php'; ?>
             </header>
 
             <!-- Main Content Area -->
-            <main class="flex-1 overflow-y-auto p-6 bg-[#0d121d]">
+            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-[#101622] pt-4 px-4 pb-0 flex flex-col">
 
                 <?php if ($staffInfo): ?>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                     
                     <!-- Internship/Employment Info Card -->
                     <div class="bg-gradient-to-br from-slate-900 to-[#101622] p-6 rounded-2xl border border-slate-800 shadow-xl relative overflow-hidden group">
-                        <div class="absolute -right-4 -top-4 w-24 h-24 bg-blue-600/10 rounded-full blur-2xl group-hover:bg-blue-600/20 transition-all duration-500"></div>
+                        <div class="btn btn-primary absolute -right-4 -top-4 w-24 h-24 bg-blue-600/10 rounded-full blur-2xl group-hover:bg-blue-600/20 transition-all duration-500"></div>
                         <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
                             <i class="fa-solid fa-briefcase text-blue-400"></i> Informação de Vínculo
                         </h3>
@@ -108,7 +105,7 @@ if ($staffInfo && $staffInfo['employee_type'] === 'estagiario' && $staffInfo['en
                                 <div class="pt-3 border-t border-slate-800/50">
                                     <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Supervisor Direto</p>
                                     <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 bg-blue-600/20 rounded-full flex items-center justify-center text-blue-400 border border-blue-500/20">
+                                        <div class="btn btn-primary w-8 h-8 bg-blue-600/20 rounded-full flex items-center justify-center text-blue-400 border border-blue-500/20">
                                             <i class="fa-solid fa-user-tie text-xs"></i>
                                         </div>
                                         <div>

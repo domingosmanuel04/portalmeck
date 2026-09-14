@@ -1,8 +1,36 @@
+# Meck RH — hardening Apache / LiteSpeed
 
+Options -Indexes
 
-# php -- BEGIN cPanel-generated handler, do not edit
-# Defina o pacote “ea-php81” como a linguagem padrão de programação “PHP”.
-<IfModule mime_module>
-  AddHandler application/x-httpd-ea-php81 .php .php8 .phtml
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "camera=(self), microphone=(self), geolocation=()"
 </IfModule>
-# php -- END cPanel-generated handler, do not edit
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # Bloquear execução de scripts dentro de uploads/ e gravacoes/
+    RewriteRule ^uploads/.*\.(?i:php|phtml|php[0-9]|phar|cgi|pl|py|asp|aspx|sh)$ - [F,L]
+    RewriteRule ^gravacoes/.*\.(?i:php|phtml|php[0-9]|phar|cgi|pl|py|asp|aspx|sh)$ - [F,L]
+    # Bloquear acesso directo a pastas sensíveis (usar api/serve_file.php)
+    RewriteRule ^gravacoes/ - [F,L]
+    RewriteRule ^uploads/(docs|cvs|chat|attendance|activities|tickets)/ - [F,L]
+    # Bloquear pastas internas e scripts de manutenção
+    RewriteRule ^(?:tmp|backups|agent-transcripts|docker|scripts|scratch|tests|migrations)/ - [F,L]
+    RewriteRule ^(?:setup_|reset_|test_|migrate_|seed_|revert_).*\.php$ - [F,L]
+    RewriteRule ^(?:setup_database|reset_database|reset_users|setup_users|setup_rh|setup_new_evaluation_columns)\.php$ - [F,L]
+</IfModule>
+
+<FilesMatch "(?i)^(\.env|\.env\..*|composer\.(json|lock)|Dockerfile|docker-compose\.ya?ml|.*\.(sql|bak| Dist|md))$">
+    Require all denied
+</FilesMatch>
+
+<FilesMatch "(?i)^(setup_|reset_|test_|migrate_|seed_|revert_).*\.php$">
+    Require all denied
+</FilesMatch>
+
+<FilesMatch "(?i)^sess_">
+    Require all denied
+</FilesMatch>

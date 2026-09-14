@@ -17,15 +17,12 @@ if (isset($_SESSION['user_id'])) {
     <link rel="icon" type="image/png" href="icone.png">
     <title>Meck - Login</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="js/notifications.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Michroma&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <?php include 'components/head_tags.php'; ?>
+    <link href="https://fonts.googleapis.com/css2?family=Michroma&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #101622;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #0b1020;
             /* Uniform dark background */
             background-image:
                 radial-gradient(circle at 10% 80%, rgba(0, 150, 255, 0.15) 0%, transparent 40%),
@@ -345,8 +342,10 @@ if (isset($_SESSION['user_id'])) {
                 </div>
 
                 <div class="pt-4 drop-shadow-lg">
-                    <button type="submit" class="login-btn w-full py-3 rounded-full text-sm shadow-xl">
-                        Aceder ao Painel
+                    <button type="submit" id="login-submit"
+                        class="login-btn btn btn-primary w-full py-3.5 rounded-xl text-sm shadow-xl inline-flex items-center justify-center gap-2 min-h-[3.25rem]">
+                        <i class="fa-solid fa-right-to-bracket" data-login-icon aria-hidden="true"></i>
+                        <span data-login-label>Aceder ao Painel</span>
                     </button>
                 </div>
             </form>
@@ -355,30 +354,54 @@ if (isset($_SESSION['user_id'])) {
                 document.querySelector('form').addEventListener('submit', async function(e) {
                     e.preventDefault();
                     const form = this;
-                    const btn = form.querySelector('button[type="submit"]');
-                    const originalText = btn.innerHTML;
-                    
+                    const btn = form.querySelector('#login-submit');
+                    const icon = btn.querySelector('[data-login-icon]');
+                    const label = btn.querySelector('[data-login-label]');
+                    if (btn.disabled) return;
+
                     btn.disabled = true;
-                    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> A processar...';
+                    btn.setAttribute('aria-busy', 'true');
+                    if (icon) icon.className = 'fa-solid fa-circle-notch fa-spin';
+                    if (label) label.textContent = 'A processar...';
+
+                    const resetBtn = () => {
+                        btn.disabled = false;
+                        btn.removeAttribute('aria-busy');
+                        if (icon) icon.className = 'fa-solid fa-right-to-bracket';
+                        if (label) label.textContent = 'Aceder ao Painel';
+                    };
 
                     try {
                         const res = await fetch(form.action, {
                             method: 'POST',
-                            body: new FormData(form)
+                            body: new FormData(form),
+                            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                            credentials: 'same-origin'
                         });
                         const data = await res.json();
 
                         if (data.success) {
-                            MeckNotifications.toast('Login bem-sucedido!', 'success');
-                            setTimeout(() => window.location.href = data.redirect || 'dashboard.php', 800);
-                        } else {
-                            MeckNotifications.error('Erro de Login', data.error || 'Credenciais inválidas');
+                            if (label) label.textContent = 'A entrar...';
+                            if (typeof MeckNotifications !== 'undefined') {
+                                MeckNotifications.toast('Login bem-sucedido!', 'success');
+                            }
+                            window.location.href = data.redirect || 'dashboard.php';
+                            return;
                         }
-                    } catch (e) {
-                        MeckNotifications.error('Erro', 'Ocorreu um erro ao processar o login.');
-                    } finally {
-                        btn.disabled = false;
-                        btn.innerHTML = originalText;
+
+                        resetBtn();
+                        if (typeof MeckNotifications !== 'undefined') {
+                            MeckNotifications.error('Erro de Login', data.error || 'Credenciais inválidas');
+                        } else {
+                            alert(data.error || 'Credenciais inválidas');
+                        }
+                    } catch (err) {
+                        resetBtn();
+                        if (typeof MeckNotifications !== 'undefined') {
+                            MeckNotifications.error('Erro', 'Ocorreu um erro ao processar o login.');
+                        } else {
+                            alert('Ocorreu um erro ao processar o login.');
+                        }
                     }
                 });
 
@@ -386,13 +409,11 @@ if (isset($_SESSION['user_id'])) {
                 document.querySelector('button[type="button"]').addEventListener('click', function() {
                     const input = this.previousElementSibling;
                     const icon = this.querySelector('i');
-                    if (input.type === 'password') {
-                        input.type = 'text';
-                        icon.classList.replace('fa-regular fa-eye-slash', 'fa-regular fa-eye');
-                    } else {
-                        input.type = 'password';
-                        icon.classList.replace('fa-regular fa-eye', 'fa-regular fa-eye-slash');
-                    }
+                    if (!input || input.tagName !== 'INPUT' || !icon) return;
+                    const show = input.type === 'password';
+                    input.type = show ? 'text' : 'password';
+                    icon.classList.toggle('fa-eye-slash', !show);
+                    icon.classList.toggle('fa-eye', show);
                 });
             </script>
         </div>

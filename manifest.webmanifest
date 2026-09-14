@@ -1,0 +1,14 @@
+{
+  "name": "Meck RH",
+  "short_name": "Meck",
+  "description": "Gestão de pessoas, estágios, chat e reuniões",
+  "start_url": "/dashboard.php",
+  "display": "standalone",
+  "background_color": "#0b1020",
+  "theme_color": "#22d3ee",
+  "lang": "pt-PT",
+  "icons": [
+    { "src": "icone.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icone.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

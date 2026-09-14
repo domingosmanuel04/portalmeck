@@ -1,13 +1,12 @@
-USE intern_system_db;
+-- Seed de utilizadores de demonstração (password: password)
+-- Remova ou altere em produção!
 
--- Inserir os três perfis restantes com a senha "password"
 INSERT INTO users (name, email, password_hash, role) VALUES 
 ('Gestor RH', 'rh@mecklitter.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'rh'),
 ('Supervisor Marcos', 'supervisor@mecklitter.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'supervisor'),
 ('Estagiário João', 'estagiario@mecklitter.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'estagiario')
 ON DUPLICATE KEY UPDATE name=VALUES(name);
 
--- Mock the Intern profile so the Estagiario can log presences, activities, etc.
 INSERT INTO interns (user_id, bi_document, nif, birth_date, institution, course, academic_year, internship_area, department, supervisor_id, start_date, end_date)
 SELECT 
     (SELECT id FROM users WHERE email='estagiario@mecklitter.com'), 

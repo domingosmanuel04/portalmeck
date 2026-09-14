@@ -2,67 +2,109 @@
 // api/evaluation_create.php - Gravação da Avaliação Mensal
 session_start();
 require_once 'db.php';
+require_once 'security_helpers.php';
 require_once 'notifications_helper.php';
+
+
+meckRequireLogin(true);
+meckRequireCsrf(true);
+
+header('Content-Type: application/json; charset=utf-8');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
-    exit("Method Not Allowed");
+    echo json_encode(['success' => false, 'error' => 'Method Not Allowed']);
+    exit;
 }
 
-/*
- * Note: Only authorized staff
- */
 $role = $_SESSION['role'] ?? 'guest';
-if (!in_array($role, ['admin', 'supervisor', 'rh'])) {
+$userId = (int) ($_SESSION['user_id'] ?? 0);
+
+if (!$userId || !in_array($role, ['admin', 'supervisor', 'rh'], true)) {
     http_response_code(403);
-    echo json_encode(['success' => false, 'error' => 'Permissão Negada para avaliar estagiários.']);
+    echo json_encode(['success' => false, 'error' => 'Sem permissão para avaliar.']);
     exit;
 }
 
-$supervisor_id = $_SESSION['user_id'] ?? 1; // Assuming 1 mock
-$intern_id = $_POST['intern_id'] ?? null;
-$evaluation_month = $_POST['evaluation_month'] ?? null; // YYYY-MM
-$score_punctuality = (int) ($_POST['score_punctuality'] ?? 0);
-$score_commitment = (int) ($_POST['score_commitment'] ?? 0);
-$score_productivity = (int) ($_POST['score_productivity'] ?? 0);
-$score_teamwork = (int) ($_POST['score_teamwork'] ?? 0);
-$score_technical = (int) ($_POST['score_technical'] ?? 0);
-$score_learning = (int) ($_POST['score_learning'] ?? 0);
-$score_teorica = (float) ($_POST['score_teorica'] ?? 0);
-$score_pratica = (float) ($_POST['score_pratica'] ?? 0);
-$comments = $_POST['comments'] ?? '';
+$intern_id = (int) ($_POST['intern_id'] ?? 0);
+$evaluation_month = trim($_POST['evaluation_month'] ?? '');
+$comments = trim($_POST['comments'] ?? '');
 
-if (empty($intern_id) || empty($evaluation_month)) {
+$clamp10 = static fn ($v) => max(0, min(10, (int) $v));
+$clamp5 = static fn ($v) => max(0, min(5, (float) $v));
+
+$score_punctuality = $clamp10($_POST['score_punctuality'] ?? 0);
+$score_commitment = $clamp10($_POST['score_commitment'] ?? 0);
+$score_productivity = $clamp10($_POST['score_productivity'] ?? 0);
+$score_teamwork = $clamp10($_POST['score_teamwork'] ?? 0);
+$score_technical = $clamp10($_POST['score_technical'] ?? 0);
+$score_learning = $clamp10($_POST['score_learning'] ?? 0);
+$score_teorica = $clamp5($_POST['score_teorica'] ?? 0);
+$score_pratica = $clamp5($_POST['score_pratica'] ?? 0);
+
+if ($intern_id < 1 || !preg_match('/^\d{4}-\d{2}$/', $evaluation_month)) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'error' => 'Os campos Estagiário e Mês de Avaliação são obrigatórios.']);
+    echo json_encode(['success' => false, 'error' => 'Estagiário e mês (AAAA-MM) são obrigatórios.']);
     exit;
 }
 
-// Convert month string "2026-02" to valid DATE "2026-02-01"
 $eval_date = $evaluation_month . '-01';
 
-// Recalculate Final Score just in case tampering occurred via client-side
-// Média dos 6 critérios (1-10) + Teórica (0-5) + Prática (0-5) = Total 0-20
-$total_score = array_sum([
-    $score_punctuality,
-    $score_commitment,
-    $score_productivity,
-    $score_teamwork,
-    $score_technical,
-    $score_learning
-]);
-$average_main = $total_score / 6; // 0-10
-$final_score = round($average_main + $score_teorica + $score_pratica, 2); // 0-20
+$average_main = (
+    $score_punctuality + $score_commitment + $score_productivity
+    + $score_teamwork + $score_technical + $score_learning
+) / 6;
+$final_score = round($average_main + $score_teorica + $score_pratica, 2);
 
 try {
+    // Garantir que o alvo é um estagiário/efectivo válido
+    $stmtIntern = $pdo->prepare("
+        SELECT i.id, i.user_id, i.supervisor_id, u.name, u.role, i.employee_type
+        FROM interns i
+        JOIN users u ON u.id = i.user_id
+        WHERE i.id = ?
+        LIMIT 1
+    ");
+    $stmtIntern->execute([$intern_id]);
+    $intern = $stmtIntern->fetch(PDO::FETCH_ASSOC);
+
+    if (!$intern) {
+        http_response_code(404);
+        echo json_encode(['success' => false, 'error' => 'Colaborador não encontrado.']);
+        exit;
+    }
+
+    // Supervisor só avalia os seus, salvo se não houver vínculo (fallback)
+    if ($role === 'supervisor') {
+        $assigned = (int) ($intern['supervisor_id'] ?? 0);
+        if ($assigned > 0 && $assigned !== $userId) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Só pode avaliar colaboradores sob a sua supervisão.']);
+            exit;
+        }
+    }
+
+    // Evitar duplicado no mesmo mês
+    $stmtDup = $pdo->prepare('SELECT id FROM evaluations WHERE intern_id = ? AND evaluation_month = ? LIMIT 1');
+    $stmtDup->execute([$intern_id, $eval_date]);
+    if ($stmtDup->fetch()) {
+        http_response_code(409);
+        echo json_encode(['success' => false, 'error' => 'Já existe avaliação deste estagiário para este mês.']);
+        exit;
+    }
+
     $stmt = $pdo->prepare("
-        INSERT INTO evaluations (intern_id, supervisor_id, evaluation_month, score_punctuality, score_commitment, score_productivity, score_teamwork, score_technical, score_learning, score_teorica, score_pratica, final_score, comments)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO evaluations (
+            intern_id, supervisor_id, evaluation_month,
+            score_punctuality, score_commitment, score_productivity,
+            score_teamwork, score_technical, score_learning,
+            score_teorica, score_pratica, final_score, comments
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
 
     $stmt->execute([
         $intern_id,
-        $supervisor_id,
+        $userId,
         $eval_date,
         $score_punctuality,
         $score_commitment,
@@ -73,34 +115,31 @@ try {
         $score_teorica,
         $score_pratica,
         $final_score,
-        $comments
+        $comments,
     ]);
 
-    // Notificar o estagiário sobre a nova avaliação
-    $stmtUser = $pdo->prepare("SELECT user_id FROM interns WHERE id = ?");
-    $stmtUser->execute([$intern_id]);
-    $internUser = $stmtUser->fetch();
-    if ($internUser) {
-        $monthName = date('F/Y', strtotime($eval_date));
+    if (!empty($intern['user_id'])) {
+        $monthLabel = date('m/Y', strtotime($eval_date));
         try {
             createNotification(
-                $pdo, 
-                $internUser['user_id'], 
-                "Desempenho Avaliado", 
-                "A sua avaliação de " . $monthName . " foi publicada com média de " . $final_score . ".", 
+                $pdo,
+                (int) $intern['user_id'],
+                'Desempenho Avaliado',
+                'A sua avaliação de ' . $monthLabel . ' foi publicada. Nota final: ' . number_format($final_score, 1) . '/20.',
                 'success'
             );
-        } catch (Exception $e) {
-            // Notificações podem não estar implementadas, continuar mesmo assim
-            error_log("Erro ao criar notificação: " . $e->getMessage());
+        } catch (Throwable $e) {
+            error_log('evaluation notify: ' . $e->getMessage());
         }
     }
 
-    echo json_encode(['success' => true, 'message' => 'Avaliação criada com sucesso.']);
-    exit;
-
+    echo json_encode([
+        'success' => true,
+        'message' => 'Avaliação criada com sucesso.',
+        'id' => (int) $pdo->lastInsertId(),
+        'final_score' => $final_score,
+    ]);
 } catch (PDOException $e) {
-    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
-    exit;
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Erro na base de dados: ' . $e->getMessage()]);
 }
-?>

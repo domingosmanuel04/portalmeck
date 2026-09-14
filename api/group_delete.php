@@ -2,6 +2,11 @@
 // api/group_delete.php
 session_start();
 require_once 'db.php';
+require_once 'security_helpers.php';
+
+
+meckRequireLogin(true);
+meckRequireCsrf(true);
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);

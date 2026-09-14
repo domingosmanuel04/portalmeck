@@ -2,6 +2,10 @@
 // api/attendance_action.php
 session_start();
 require_once 'db.php';
+require_once 'security_helpers.php';
+
+meckRequireLogin(true);
+meckRequireCsrf(true);
 
 header('Content-Type: application/json');
 
@@ -14,7 +18,7 @@ $userId = $_SESSION['user_id'] ?? null;
 $role = $_SESSION['role'] ?? '';
 
 if (!$userId || $role !== 'estagiario') {
-    echo json_encode(['success' => false, 'error' => 'Acesso negado. Apenas estagiários podem marcar ponto.']);
+    echo json_encode(['success' => false, 'error' => 'Acesso negado. Apenas colaboradores podem marcar ponto.']);
     exit;
 }
 
@@ -71,7 +75,7 @@ try {
             $stmtInsIntern->execute([$userId]);
             $internId = $pdo->lastInsertId();
         } catch (Exception $e) {
-            echo json_encode(['success' => false, 'error' => 'Perfil de estagiário não encontrado e não foi possível criar um automaticamente.']);
+            echo json_encode(['success' => false, 'error' => 'Perfil de colaborador não encontrado e não foi possível criar um automaticamente.']);
             exit;
         }
     } else {

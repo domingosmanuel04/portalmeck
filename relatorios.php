@@ -21,13 +21,38 @@ $stmt->execute([$userId]);
 $currentUser = $stmt->fetch();
 
 // Redirect interns if they try to access reports (assuming they shouldn't)
-if ($role === 'estagiario') {
+if (in_array($role, ['estagiario', 'funcionario'], true)) {
     header('Location: dashboard.php');
     exit;
 }
 
-// Fetch company settings for reports
-$company = $pdo->query("SELECT * FROM company_settings WHERE id = 1")->fetch();
+// Fetch company settings for reports (safe defaults)
+$company = ['name' => 'Meck', 'logotype' => 'logo.png', 'email' => '', 'phone' => '', 'location' => '', 'nif' => ''];
+try {
+    $stmtCompany = $pdo->query("SELECT * FROM company_settings WHERE id = 1 LIMIT 1");
+    $rowCompany = $stmtCompany ? $stmtCompany->fetch(PDO::FETCH_ASSOC) : false;
+    if ($rowCompany) {
+        $company = array_merge($company, $rowCompany);
+    }
+} catch (Throwable $e) {
+    // keep defaults
+}
+
+// Departamentos usados nos estagiários (fallback se tabela departments falhar)
+$deptFallback = [];
+try {
+    $deptFallback = $pdo->query("
+        SELECT DISTINCT department AS name
+        FROM interns
+        WHERE department IS NOT NULL AND department <> ''
+        ORDER BY department ASC
+    ")->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($deptFallback as $i => $d) {
+        $deptFallback[$i]['id'] = $i + 1;
+    }
+} catch (Throwable $e) {
+    $deptFallback = [];
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-PT" class="h-full bg-[#101622]">
@@ -38,9 +63,9 @@ $company = $pdo->query("SELECT * FROM company_settings WHERE id = 1")->fetch();
     <link rel="icon" type="image/png" href="icone.png">
     <title>Meck - Relatórios</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <?php include 'components/head_tags.php'; ?>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- Export Libraries -->
@@ -49,7 +74,7 @@ $company = $pdo->query("SELECT * FROM company_settings WHERE id = 1")->fetch();
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     <style>
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             background-color: #101622;
         }
 
@@ -70,9 +95,6 @@ $company = $pdo->query("SELECT * FROM company_settings WHERE id = 1")->fetch();
         <div class="flex-1 flex flex-col overflow-hidden">
 
             <header class="flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
-                <button @click="sidebarOpen = true" class="text-gray-400 focus:outline-none md:hidden">
-                    <i class="fa-solid fa-bars text-xl"></i>
-                </button>
                 <div class="flex-1 flex justify-between">
                     <h1 class="text-2xl font-semibold text-white hidden md:block">Centro de Relatórios</h1>
                     <?php include 'components/header_user.php'; ?>
@@ -112,9 +134,9 @@ $company = $pdo->query("SELECT * FROM company_settings WHERE id = 1")->fetch();
                                         class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Filtro
                                         por Departamento</label>
                                     <select x-model="reportOptions.performance.department"
-                                        class="w-full bg-slate-50 border-transparent text-slate-700 text-sm rounded-xl p-3 focus:ring-2 focus:ring-blue-500/10 focus:bg-white outline-none transition-all font-bold">
+                                        class="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded-xl p-3 focus:ring-2 focus:ring-blue-500/10 focus:bg-slate-900 outline-none transition-all font-bold">
                                         <option value="all">Todos os Departamentos</option>
-                                        <template x-for="dept in departments" :key="dept.id">
+                                        <template x-for="dept in departments" :key="dept.id || dept.name">
                                             <option :value="dept.name" x-text="dept.name"></option>
                                         </template>
                                     </select>
@@ -130,7 +152,7 @@ $company = $pdo->query("SELECT * FROM company_settings WHERE id = 1")->fetch();
                                     </select>
                                 </div>
                                 <button type="submit"
-                                    class="w-full bg-blue-600 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl py-4 hover:bg-blue-700 transition shadow-lg shadow-blue-500/30 active:scale-95 flex items-center justify-center gap-2">
+                                    class="btn btn-primary w-full bg-blue-600 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl py-4 hover:bg-blue-700 transition shadow-lg shadow-blue-500/30 active:scale-95 flex items-center justify-center gap-2">
                                     <i :class="getIcon(reportOptions.performance.format)"></i> Gerar Relatório
                                 </button>
                             </form>
@@ -157,7 +179,7 @@ $company = $pdo->query("SELECT * FROM company_settings WHERE id = 1")->fetch();
                                     <select x-model="reportOptions.attendance.department"
                                         class="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded-xl p-3 focus:ring-2 focus:ring-blue-500/10 focus:bg-slate-900 outline-none transition-all font-bold">
                                         <option value="all">Todos os Departamentos</option>
-                                        <template x-for="dept in departments" :key="dept.id">
+                                        <template x-for="dept in departments" :key="dept.id || dept.name">
                                             <option :value="dept.name" x-text="dept.name"></option>
                                         </template>
                                     </select>
@@ -208,7 +230,7 @@ $company = $pdo->query("SELECT * FROM company_settings WHERE id = 1")->fetch();
                                     <select x-model="reportOptions.financial.department"
                                         class="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded-xl p-3 focus:ring-2 focus:ring-blue-500/10 focus:bg-slate-900 outline-none transition-all font-bold">
                                         <option value="all">Todos os Departamentos</option>
-                                        <template x-for="dept in departments" :key="dept.id">
+                                        <template x-for="dept in departments" :key="dept.id || dept.name">
                                             <option :value="dept.name" x-text="dept.name"></option>
                                         </template>
                                     </select>
@@ -216,25 +238,32 @@ $company = $pdo->query("SELECT * FROM company_settings WHERE id = 1")->fetch();
                                 <div class="grid grid-cols-2 gap-3">
                                     <div>
                                         <label
+                                            class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Mês
+                                            de Referência</label>
+                                        <input type="month" x-model="reportOptions.financial.month"
+                                            class="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded-xl p-3 focus:ring-2 focus:ring-blue-500/10 focus:bg-slate-900 outline-none transition-all font-bold">
+                                    </div>
+                                    <div>
+                                        <label
                                             class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Status
                                             Base</label>
                                         <select x-model="reportOptions.financial.status"
                                             class="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded-xl p-3 focus:ring-2 focus:ring-blue-500/10 focus:bg-slate-900 outline-none transition-all font-bold">
-                                            <option value="ativo" class="bg-[#101622]">Estagiários Ativos</option>
+                                            <option value="ativo" class="bg-[#101622]">Ativos</option>
                                             <option value="all" class="bg-[#101622]">Todo o Histórico</option>
-                                            <option value="suspenso" class="bg-[#101622]">Apenas Suspensos</option>
+                                            <option value="suspenso" class="bg-[#101622]">Suspensos</option>
                                         </select>
                                     </div>
-                                    <div>
-                                        <label
-                                            class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Formato</label>
-                                        <select x-model="reportOptions.financial.format"
-                                            class="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded-xl p-3 focus:ring-2 focus:ring-blue-500/10 focus:bg-slate-900 outline-none transition-all font-bold">
-                                            <option value="csv" class="bg-[#101622]">CSV</option>
-                                            <option value="excel" class="bg-[#101622]">Excel</option>
-                                            <option value="pdf" class="bg-[#101622]">PDF</option>
-                                        </select>
-                                    </div>
+                                </div>
+                                <div>
+                                    <label
+                                        class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Formato</label>
+                                    <select x-model="reportOptions.financial.format"
+                                        class="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded-xl p-3 focus:ring-2 focus:ring-blue-500/10 focus:bg-slate-900 outline-none transition-all font-bold">
+                                        <option value="csv" class="bg-[#101622]">CSV</option>
+                                        <option value="excel" class="bg-[#101622]">Excel</option>
+                                        <option value="pdf" class="bg-[#101622]">PDF</option>
+                                    </select>
                                 </div>
                                 <button type="submit"
                                     class="w-full bg-slate-800 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl py-4 hover:bg-slate-900 transition shadow-xl shadow-slate-900/20 active:scale-95 flex items-center justify-center gap-2">
@@ -256,24 +285,37 @@ $company = $pdo->query("SELECT * FROM company_settings WHERE id = 1")->fetch();
     </div>
 
     <script>
-
         function reportsApp() {
+            const deptFallback = <?= json_encode($deptFallback, JSON_UNESCAPED_UNICODE) ?>;
+
             return {
-                sidebarOpen: false, departments: [], 
+                sidebarOpen: false,
+                loading: false,
+                departments: Array.isArray(deptFallback) ? deptFallback : [],
                 reportOptions: {
                     performance: { department: 'all', format: 'excel' },
                     attendance: { department: 'all', month: '<?= date('Y-m') ?>', format: 'excel' },
-                    financial: { department: 'all', status: 'ativo', format: 'excel' }
+                    financial: { department: 'all', status: 'ativo', month: '<?= date('Y-m') ?>', format: 'excel' }
                 },
 
                 init() { this.fetchDepts(); },
 
                 async fetchDepts() {
                     try {
-                        let r = await fetch('api/org_manage.php?type=get_departments');
-                        let d = await r.json();
-                        this.departments = d.departments || [];
-                    } catch (e) { }
+                        const r = await fetch('api/org_manage.php?type=get_departments');
+                        const d = await r.json();
+                        const fromApi = (d.success && Array.isArray(d.departments)) ? d.departments : [];
+                        const map = new Map();
+                        [...fromApi, ...(this.departments || [])].forEach((dept, idx) => {
+                            const name = (dept && dept.name) ? String(dept.name).trim() : '';
+                            if (name && !map.has(name)) {
+                                map.set(name, { id: dept.id || idx + 1, name });
+                            }
+                        });
+                        this.departments = Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, 'pt'));
+                    } catch (e) {
+                        // mantém fallback PHP
+                    }
                 },
 
                 getIcon(format) {
@@ -282,37 +324,59 @@ $company = $pdo->query("SELECT * FROM company_settings WHERE id = 1")->fetch();
                     return 'fa-solid fa-file-excel text-xs';
                 },
 
+                rowValues(row) {
+                    return Object.keys(row).map((k) => row[k] ?? '');
+                },
+
                 async generateReport(type) {
+                    if (this.loading) return;
                     const opts = this.reportOptions[type];
                     let apiPath = '';
-                    let params = new URLSearchParams();
+                    const params = new URLSearchParams();
 
                     if (type === 'performance') {
                         apiPath = 'api/reports_performance.php';
-                        params.append('department', opts.department);
+                        params.append('department', opts.department || 'all');
                     } else if (type === 'attendance') {
                         apiPath = 'api/reports_attendance.php';
-                        params.append('department', opts.department);
-                        params.append('month', opts.month);
+                        params.append('department', opts.department || 'all');
+                        params.append('month', opts.month || '<?= date('Y-m') ?>');
                     } else if (type === 'financial') {
                         apiPath = 'api/export_csv.php';
-                        params.append('department', opts.department);
-                        params.append('status', opts.status);
+                        params.append('department', opts.department || 'all');
+                        params.append('status', opts.status || 'ativo');
+                        params.append('month', opts.month || '<?= date('Y-m') ?>');
+                    } else {
+                        return;
                     }
 
-                    // Add format and json mode
-                    params.append('format', opts.format);
+                    params.append('format', opts.format || 'excel');
                     params.append('json', '1');
 
+                    this.loading = true;
                     try {
-                        let r = await fetch(apiPath + '?' + params.toString());
-                        let data = await r.json();
+                        const r = await fetch(apiPath + '?' + params.toString());
+                        const text = await r.text();
+                        let data;
+                        try {
+                            data = JSON.parse(text);
+                        } catch (parseErr) {
+                            throw new Error(text && text.length < 200 ? text : 'Resposta inválida do servidor.');
+                        }
 
-                        if (data.error) { alert(data.error); return; }
+                        if (!r.ok || data.error) {
+                            alert(data.error || 'Não foi possível gerar o relatório.');
+                            return;
+                        }
 
-                        const headers = data.headers;
-                        const records = data.records;
-                        const filename = data.filename || 'relatorio';
+                        const headers = data.headers || [];
+                        const records = Array.isArray(data.records) ? data.records : [];
+                        const filename = data.filename || ('relatorio_' + type);
+
+                        if (!records.length) {
+                            alert('Sem dados para os filtros selecionados. Ajuste o departamento ou o mês e tente novamente.');
+                            return;
+                        }
 
                         if (opts.format === 'csv') {
                             this.downloadCSV(headers, records, filename);
@@ -322,138 +386,140 @@ $company = $pdo->query("SELECT * FROM company_settings WHERE id = 1")->fetch();
                             this.downloadExcel(headers, records, filename);
                         }
                     } catch (e) {
-                        alert("Erro ao gerar relatório. Tente novamente.");
+                        alert(e.message || 'Erro ao gerar relatório. Tente novamente.');
                         console.error(e);
+                    } finally {
+                        this.loading = false;
                     }
                 },
 
                 downloadCSV(headers, rows, filename) {
                     let csv = '\uFEFF' + headers.join(';') + '\n';
-                    rows.forEach(row => {
-                        csv += Object.values(row).join(';') + '\n';
+                    rows.forEach((row) => {
+                        csv += this.rowValues(row).map((v) => String(v).replace(/;/g, ',')).join(';') + '\n';
                     });
                     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-                    const link = document.createElement("a");
+                    const link = document.createElement('a');
                     link.href = URL.createObjectURL(blob);
-                    link.setAttribute("download", filename + ".csv");
+                    link.setAttribute('download', filename + '.csv');
+                    document.body.appendChild(link);
                     link.click();
+                    link.remove();
                 },
 
                 downloadExcel(headers, rows, filename) {
-                    const worksheet = XLSX.utils.json_to_sheet(rows);
-                    XLSX.utils.sheet_add_aoa(worksheet, [headers], { origin: "A1" });
+                    if (typeof XLSX === 'undefined') {
+                        alert('Biblioteca Excel indisponível. Escolha CSV ou atualize a página.');
+                        return;
+                    }
+                    const aoa = [headers].concat(rows.map((row) => this.rowValues(row)));
+                    const worksheet = XLSX.utils.aoa_to_sheet(aoa);
                     const workbook = XLSX.utils.book_new();
-                    XLSX.utils.book_append_sheet(workbook, worksheet, "Relatorio");
-                    XLSX.writeFile(workbook, filename + ".xlsx");
+                    XLSX.utils.book_append_sheet(workbook, worksheet, 'Relatorio');
+                    XLSX.writeFile(workbook, filename + '.xlsx');
                 },
 
                 downloadPDF(headers, rows, filename, title) {
+                    if (!window.jspdf || !window.jspdf.jsPDF) {
+                        alert('Biblioteca PDF indisponível. Escolha Excel/CSV ou atualize a página.');
+                        return;
+                    }
                     const { jsPDF } = window.jspdf;
                     const doc = new jsPDF();
-                    
-                    const companyName = '<?= addslashes($company['name'] ?? 'Meck') ?>';
-                    const companyLogo = '<?= $company['logotype'] ?: 'logo.png' ?>';
-                    const companyEmail = '<?= addslashes($company['email'] ?? '') ?>';
-                    const companyPhone = '<?= addslashes($company['phone'] ?? '') ?>';
-                    const companyLocation = '<?= addslashes($company['location'] ?? '') ?>';
-                    const companyNif = '<?= addslashes($company['nif'] ?? '') ?>';
 
-                    // Adicionar Logo
+                    const companyName = <?= json_encode($company['name'] ?? 'Meck', JSON_UNESCAPED_UNICODE) ?>;
+                    const companyLogo = <?= json_encode($company['logotype'] ?: 'logo.png', JSON_UNESCAPED_UNICODE) ?>;
+                    const companyEmail = <?= json_encode($company['email'] ?? '', JSON_UNESCAPED_UNICODE) ?>;
+                    const companyPhone = <?= json_encode($company['phone'] ?? '', JSON_UNESCAPED_UNICODE) ?>;
+                    const companyLocation = <?= json_encode($company['location'] ?? '', JSON_UNESCAPED_UNICODE) ?>;
+                    const companyNif = <?= json_encode($company['nif'] ?? '', JSON_UNESCAPED_UNICODE) ?>;
+
                     const logoImg = new Image();
+                    logoImg.crossOrigin = 'anonymous';
                     logoImg.src = companyLogo;
-                    
-                    // Adicionar cabeçalho após carregar a imagem ou imediatamente
+
+                    const titles = {
+                        performance: 'Desempenho',
+                        attendance: 'Assiduidade',
+                        financial: 'Remuneração'
+                    };
+
                     const addHeader = () => {
                         const pageWidth = doc.internal.pageSize.getWidth();
-                        
+
                         try {
-                            // Logo Centralizado
-                            const logoWidth = 30;
-                            const logoHeight = 15;
-                            const logoX = (pageWidth - logoWidth) / 2;
-                            doc.addImage(logoImg, 'PNG', logoX, 10, logoWidth, logoHeight);
-                        } catch (e) {
-                            console.warn("Logo não carregada no PDF", e);
-                        }
-                        
-                        // Nome da Empresa Centralizado
+                            if (logoImg.naturalWidth) {
+                                const logoWidth = 30;
+                                const logoHeight = 15;
+                                const logoX = (pageWidth - logoWidth) / 2;
+                                doc.addImage(logoImg, 'PNG', logoX, 10, logoWidth, logoHeight);
+                            }
+                        } catch (e) { /* logo opcional */ }
+
                         doc.setFontSize(14);
-                        doc.setTextColor(30, 41, 59); // slate-800
+                        doc.setTextColor(30, 41, 59);
                         doc.setFont('helvetica', 'bold');
                         const nameWidth = doc.getTextWidth(companyName);
                         doc.text(companyName, (pageWidth - nameWidth) / 2, 32);
-                        
-                        // NIF e Informações Centralizados
+
                         doc.setFontSize(8);
                         doc.setFont('helvetica', 'normal');
                         doc.setTextColor(100);
-                        
-                        let infoLines = [];
-                        if (companyNif) infoLines.push("NIF: " + companyNif);
-                        
-                        let contactLine = [];
-                        if (companyLocation) contactLine.push(companyLocation);
-                        if (companyPhone) contactLine.push("Tel: " + companyPhone);
-                        if (companyEmail) contactLine.push("Email: " + companyEmail);
-                        
-                        if (infoLines.length > 0) {
-                            const nifText = infoLines.join(' | ');
-                            const nifWidth = doc.getTextWidth(nifText);
-                            doc.text(nifText, (pageWidth - nifWidth) / 2, 38);
-                        }
-                        
-                        if (contactLine.length > 0) {
-                            const contactText = contactLine.join(' | ');
-                            const contactWidth = doc.getTextWidth(contactText);
-                            doc.text(contactText, (pageWidth - contactWidth) / 2, 43);
+
+                        if (companyNif) {
+                            const nifText = 'NIF: ' + companyNif;
+                            doc.text(nifText, (pageWidth - doc.getTextWidth(nifText)) / 2, 38);
                         }
 
-                        doc.setDrawColor(226, 232, 240); // slate-200
-                        doc.line(14, 48, pageWidth - 14, 48); // Linha divisória
+                        const contactLine = [];
+                        if (companyLocation) contactLine.push(companyLocation);
+                        if (companyPhone) contactLine.push('Tel: ' + companyPhone);
+                        if (companyEmail) contactLine.push('Email: ' + companyEmail);
+                        if (contactLine.length) {
+                            const contactText = contactLine.join(' | ');
+                            doc.text(contactText, (pageWidth - doc.getTextWidth(contactText)) / 2, 43);
+                        }
+
+                        doc.setDrawColor(226, 232, 240);
+                        doc.line(14, 48, pageWidth - 14, 48);
 
                         doc.setFontSize(10);
                         doc.setTextColor(100);
-                        doc.text("Relatório de " + title.charAt(0).toUpperCase() + title.slice(1), 14, 55);
-                        doc.text("Gerado em: " + new Date().toLocaleString(), 14, 60);
+                        doc.text('Relatório de ' + (titles[title] || title), 14, 55);
+                        doc.text('Gerado em: ' + new Date().toLocaleString('pt-PT'), 14, 60);
 
-                        // Mapear dados para garantir que as colunas correspondam aos cabeçalhos
-                        const bodyData = rows.map(r => {
-                            const clean = (str) => {
-                                if (!str) return '';
-                                if (str.includes('&')) {
-                                    str = str.replace(/&/g, '');
-                                }
-                                return str;
-                            };
+                        const bodyData = rows.map((r) => this.rowValues(r).map((v) => String(v ?? '').replace(/&/g, '')));
 
-                            if (title === 'attendance') {
-                                return [clean(r.name), r.date, r.check_in, r.check_out, r.total_hours, r.status];
-                            } else if (title === 'performance') {
-                                return [clean(r.name), r.department, r.course, r.avg_score, r.total_evals, r.last_eval];
-                            } else if (title === 'financial') {
-                                return [r.id, clean(r.name), r.bi_document, r.department, r.scholarship_amount, r.status];
-                            }
-                            return Object.values(r).map(v => typeof v === 'string' ? clean(v) : v);
-                        });
+                        if (typeof doc.autoTable === 'function') {
+                            doc.autoTable({
+                                startY: 65,
+                                head: [headers],
+                                body: bodyData,
+                                theme: 'striped',
+                                headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold' },
+                                alternateRowStyles: { fillColor: [248, 250, 252] },
+                                margin: { top: 65 }
+                            });
+                        } else {
+                            doc.text('Dados: ' + rows.length + ' registos', 14, 70);
+                        }
 
-                        doc.autoTable({
-                            startY: 65,
-                            head: [headers],
-                            body: bodyData,
-                            theme: 'striped',
-                            headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold' },
-                            alternateRowStyles: { fillColor: [248, 250, 252] },
-                            margin: { top: 65 }
-                        });
+                        doc.save(filename + '.pdf');
+                    };
 
-                        doc.save(filename + ".pdf");
+                    let done = false;
+                    const runOnce = () => {
+                        if (done) return;
+                        done = true;
+                        addHeader();
                     };
 
                     if (logoImg.complete) {
-                        addHeader();
+                        runOnce();
                     } else {
-                        logoImg.onload = addHeader;
-                        logoImg.onerror = addHeader; // Fallback se falhar
+                        logoImg.onload = runOnce;
+                        logoImg.onerror = runOnce;
+                        setTimeout(runOnce, 1500);
                     }
                 }
             }

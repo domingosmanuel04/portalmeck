@@ -2,6 +2,11 @@
 // api/attendance_update.php
 session_start();
 require_once 'db.php';
+require_once 'security_helpers.php';
+
+
+meckRequireLogin(true);
+meckRequireCsrf(true);
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -35,9 +40,14 @@ if (isset($_FILES['justification_file']) && $_FILES['justification_file']['error
 
     $upload_dir = '../uploads/attendance/';
     if (!is_dir($upload_dir)) {
-        mkdir($upload_dir, 0777, true);
+        mkdir($upload_dir, 0755, true);
     }
-    $filename = uniqid('justification_') . '_' . basename($file['name']);
+    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    if (!in_array($ext, ['pdf', 'jpg', 'jpeg', 'png'], true)) {
+        echo json_encode(['success' => false, 'error' => 'Extensão de arquivo não permitida.']);
+        exit;
+    }
+    $filename = uniqid('justification_', true) . '.' . $ext;
     $target_path = $upload_dir . $filename;
     if (move_uploaded_file($file['tmp_name'], $target_path)) {
         $justification_file_path = 'uploads/attendance/' . $filename;

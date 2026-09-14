@@ -2,6 +2,10 @@
 // api/intern_update.php
 session_start();
 require_once 'db.php';
+require_once 'security_helpers.php';
+
+meckRequireLogin(true);
+meckRequireCsrf(true);
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -11,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $role = $_SESSION['role'] ?? null;
 if ($role !== 'admin' && $role !== 'rh') {
     http_response_code(403);
-    echo json_encode(['error' => 'Acesso negado. Apenas administradores e RH podem editar estagiários.']);
+    echo json_encode(['error' => 'Acesso negado. Apenas administradores e RH podem editar colaboradores.']);
     exit;
 }
 
@@ -63,14 +67,7 @@ try {
         // 2. Handle Image Upload
         $photoUrl = null;
         if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
-            $uploadDir = '../uploads/profiles/';
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0777, true);
-            }
-            $filename = uniqid('profile_') . '_' . $_FILES['photo']['name'];
-            if (move_uploaded_file($_FILES['photo']['tmp_name'], $uploadDir . $filename)) {
-                $photoUrl = 'uploads/profiles/' . $filename;
-            }
+            $photoUrl = meckStoreProfilePhoto($_FILES['photo']);
         }
 
         // 3. Update the user account info
@@ -116,6 +113,23 @@ try {
 
         $stmtIntern = $pdo->prepare($sqlIntern);
         $stmtIntern->execute($paramsIntern);
+
+        if (!empty($department)) {
+            try {
+                $stmtDept = $pdo->prepare('SELECT id FROM departments WHERE name = ? LIMIT 1');
+                $stmtDept->execute([$department]);
+                $deptId = $stmtDept->fetchColumn();
+                if (!$deptId) {
+                    $pdo->prepare('INSERT INTO departments (name) VALUES (?)')->execute([$department]);
+                    $deptId = (int) $pdo->lastInsertId();
+                }
+                $pdo->prepare('UPDATE interns SET department_id = ? WHERE id = ?')->execute([(int) $deptId, $id]);
+            } catch (Throwable $e) {
+            }
+        }
+
+        require_once 'audit_helper.php';
+        auditLog($pdo, 'intern.update', 'intern', $id, ['department' => $department]);
 
         $pdo->commit();
         echo json_encode(['success' => true]);

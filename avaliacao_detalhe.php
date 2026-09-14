@@ -54,11 +54,16 @@ $company = $pdo->query("SELECT * FROM company_settings WHERE id = 1")->fetch();
 
 // Load intern list for edit modal
 $interns_list = [];
-if (in_array($role, ['admin', 'rh'])) {
+$canEditEvaluation = in_array($role, ['admin', 'rh'], true)
+    || ($role === 'supervisor' && (int) $evaluation['supervisor_id'] === (int) $userId);
+
+if (in_array($role, ['admin', 'rh', 'supervisor'], true)) {
     $interns_list = $pdo->query("
         SELECT i.id, u.name 
         FROM interns i 
         JOIN users u ON i.user_id = u.id 
+        WHERE i.status = 'ativo'
+          AND (i.employee_type = 'estagiario' OR u.role = 'estagiario')
         ORDER BY u.name ASC
     ")->fetchAll(PDO::FETCH_ASSOC);
 }
@@ -72,10 +77,10 @@ if (in_array($role, ['admin', 'rh'])) {
     <link rel="icon" type="image/png" href="icone.png">
     <title>Meck - Detalhes da Avaliação</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <?php include 'components/head_tags.php'; ?>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>body { font-family: 'Inter', sans-serif; background-color: #101622; } [x-cloak] { display: none !important; }</style>
+    <style>body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #101622; } [x-cloak] { display: none !important; }</style>
 </head>
 <body class="h-full antialiased text-slate-200 bg-[#101622]" x-data='{ 
     sidebarOpen: false, 
@@ -161,9 +166,6 @@ if (in_array($role, ['admin', 'rh'])) {
         <?php include 'components/sidebar.php'; ?>
         <div class="flex-1 flex flex-col overflow-hidden">
             <header class="flex items-center justify-between px-6 py-8 bg-[#101622] border-b border-slate-800">
-                <button @click="sidebarOpen = true" class="text-gray-400 focus:outline-none md:hidden">
-                    <i class="fa-solid fa-bars text-xl"></i>
-                </button>
                 <div class="flex-1 flex justify-between">
                     <h1 class="text-2xl font-semibold text-white hidden md:block">Detalhes da Avaliação</h1>
                     <div class="flex items-center gap-6 ml-auto">
@@ -192,9 +194,9 @@ if (in_array($role, ['admin', 'rh'])) {
                                     class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-4 rounded-xl shadow-md transition-colors flex items-center justify-center gap-2 text-sm">
                                     <i class="fa-solid fa-download"></i> Baixar em PDF
                                 </button>
-                                <?php if (in_array($role, ['admin', 'rh'])): ?>
+                                <?php if ($canEditEvaluation): ?>
                                     <button @click="editModalOpen = true"
-                                        class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-xl shadow-md transition-colors flex items-center justify-center gap-2 text-sm">
+                                        class="btn btn-primary bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-xl shadow-md transition-colors flex items-center justify-center gap-2 text-sm">
                                         <i class="fa-solid fa-edit"></i> Editar
                                     </button>
                                     <button @click="deleteModalOpen = true"
@@ -295,10 +297,10 @@ if (in_array($role, ['admin', 'rh'])) {
                     <div class="grid grid-cols-2 gap-4 mb-6">
                         <div>
                             <label class="block text-sm font-medium text-slate-300 mb-1">Selecionar
-                                Estagiário *</label>
+                                Colaborador *</label>
                             <select x-model="editSelectedIntern"
                                 class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:ring-blue-500 shadow-sm" required>
-                                <option value="" class="bg-[#101622]">Selecionar Estagiário...</option>
+                                <option value="" class="bg-[#101622]">Selecionar colaborador...</option>
                                 <?php foreach ($interns_list as $int): ?>
                                     <option value="<?= $int['id'] ?>" class="bg-[#101622]" <?= $int['id'] == $evaluation['intern_id'] ? 'selected' : '' ?>><?= htmlspecialchars($int['name']) ?></option>
                                 <?php endforeach; ?>
@@ -408,7 +410,7 @@ if (in_array($role, ['admin', 'rh'])) {
                         <button type="button" @click="editModalOpen = false"
                             class="py-2 px-5 rounded-lg font-medium text-slate-400 bg-slate-800 hover:bg-slate-700 transition">Cancelar</button>
                         <button type="submit"
-                            class="py-2 px-6 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 transition shadow-lg shadow-blue-500/30 flex items-center gap-2">
+                            class="btn btn-primary py-2 px-6 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 transition shadow-lg shadow-blue-500/30 flex items-center gap-2">
                             <i class="fa-solid fa-save"></i> Atualizar Avaliação
                         </button>
                     </div>
@@ -462,7 +464,7 @@ if (in_array($role, ['admin', 'rh'])) {
             <h2 style="color: #0066cc; border-left: 4px solid #0066cc; padding-left: 10px; font-size: 18px; margin-bottom: 15px;">Informações Gerais</h2>
             <table style="width: 100%; border-collapse: collapse;">
                 <tr>
-                    <td style="padding: 10px; border: 1px solid #ddd; background: #f8f9fa; width: 30%; font-weight: bold;">Estagiário</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; background: #f8f9fa; width: 30%; font-weight: bold;">Colaborador</td>
                     <td style="padding: 10px; border: 1px solid #ddd;"><?= htmlspecialchars($evaluation['intern_name']) ?></td>
                 </tr>
                 <tr>
@@ -527,7 +529,7 @@ if (in_array($role, ['admin', 'rh'])) {
                 <p style="margin: 0; font-size: 10px; color: #666;"><?= htmlspecialchars($evaluation['assigned_supervisor_name'] ?: 'Não atribuído') ?></p>
             </div>
             <div style="width: 200px; border-top: 1px solid #333; padding-top: 10px;">
-                <p style="margin: 0; font-size: 12px; font-weight: bold;">Estagiário</p>
+                <p style="margin: 0; font-size: 12px; font-weight: bold;">Colaborador</p>
                 <p style="margin: 0; font-size: 10px; color: #666;"><?= htmlspecialchars($evaluation['intern_name']) ?></p>
             </div>
         </div>

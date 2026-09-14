@@ -2,15 +2,17 @@
 // api/notifications_read.php
 session_start();
 require_once 'db.php';
+require_once 'security_helpers.php';
 
-$userId = $_SESSION['user_id'] ?? 1;
+header('Content-Type: application/json; charset=utf-8');
+
+$userId = meckRequireLogin(true);
+meckRequireCsrf(true);
 
 try {
     $stmt = $pdo->prepare("UPDATE notifications SET is_read = 1 WHERE user_id = ?");
     $stmt->execute([$userId]);
     echo json_encode(['success' => true]);
 } catch (PDOException $e) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Database Error: ' . $e->getMessage()]);
+    meckJsonError('Não foi possível marcar notificações como lidas.', 500);
 }
-?>

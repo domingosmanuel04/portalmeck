@@ -49,6 +49,17 @@ try {
         if (!in_array('internship_area', $colsUsers)) {
             $pdo->exec("ALTER TABLE users ADD COLUMN internship_area VARCHAR(150) DEFAULT NULL");
         }
+
+        // Papéis modernos (hosting antigo só tinha admin/rh/supervisor/estagiario)
+        try {
+            $roleCol = $pdo->query("SHOW COLUMNS FROM users LIKE 'role'")->fetch(PDO::FETCH_ASSOC);
+            $type = (string) ($roleCol['Type'] ?? '');
+            if ($type !== '' && stripos($type, 'enum') !== false
+                && (stripos($type, 'funcionario') === false || stripos($type, 'tecnico') === false)) {
+                $pdo->exec("ALTER TABLE users MODIFY role VARCHAR(32) NOT NULL DEFAULT 'estagiario'");
+            }
+        } catch (Throwable $e) {
+        }
         
         // Ensure departments table exists
         $pdo->exec("CREATE TABLE IF NOT EXISTS departments (
@@ -84,7 +95,7 @@ try {
             end_date DATE,
             scholarship_amount DECIMAL(10,2) DEFAULT 0.00,
             status ENUM('ativo', 'suspenso', 'concluido') DEFAULT 'ativo',
-            employee_type ENUM('estagiario', 'efectivo') DEFAULT 'estagiario',
+            employee_type VARCHAR(32) DEFAULT 'estagiario',
             photo_url VARCHAR(255),
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )");
@@ -92,7 +103,16 @@ try {
         // Add employee_type if it doesn't exist in interns
         $colsInterns = $pdo->query("SHOW COLUMNS FROM interns")->fetchAll(PDO::FETCH_COLUMN);
         if (!in_array('employee_type', $colsInterns)) {
-            $pdo->exec("ALTER TABLE interns ADD COLUMN employee_type ENUM('estagiario', 'efectivo') DEFAULT 'estagiario'");
+            $pdo->exec("ALTER TABLE interns ADD COLUMN employee_type VARCHAR(32) DEFAULT 'estagiario'");
+        } else {
+            try {
+                $et = $pdo->query("SHOW COLUMNS FROM interns LIKE 'employee_type'")->fetch(PDO::FETCH_ASSOC);
+                $etType = (string) ($et['Type'] ?? '');
+                if (stripos($etType, 'enum') !== false && stripos($etType, 'funcionario') === false) {
+                    $pdo->exec("ALTER TABLE interns MODIFY employee_type VARCHAR(32) DEFAULT 'estagiario'");
+                }
+            } catch (Throwable $e) {
+            }
         }
 
         // Company Settings table
@@ -149,6 +169,24 @@ try {
         if (!in_array('food_subsidy', $colsInterns)) {
             $pdo->exec("ALTER TABLE interns ADD COLUMN food_subsidy DECIMAL(10,2) DEFAULT 0.00");
         }
+        if (!in_array('department_id', $colsInterns)) {
+            $pdo->exec("ALTER TABLE interns ADD COLUMN department_id INT NULL");
+            // sync names → ids
+            try {
+                $pdo->exec("
+                    UPDATE interns i
+                    JOIN departments d ON d.name = i.department
+                    SET i.department_id = d.id
+                    WHERE i.department IS NOT NULL AND i.department <> '' AND i.department_id IS NULL
+                ");
+            } catch (Throwable $e) {}
+        }
+
+        // Auditoria + gravações + tickets intervenção
+        require_once __DIR__ . '/audit_helper.php';
+        auditEnsureSchema($pdo);
+        require_once __DIR__ . '/intervention_schema.php';
+        interventionEnsureSchema($pdo);
 
         // Vacations table
         $pdo->exec("CREATE TABLE IF NOT EXISTS vacations (
@@ -217,6 +255,10 @@ try {
         // Ignore schema errors during boot
     }
 } catch (PDOException $e) {
-    // In production, we'd log this instead of outputting
-    die("Database Connection Error: " . $e->getMessage());
+    $isProd = (getenv('APP_ENV') ?: 'production') === 'production';
+    http_response_code(500);
+    if ($isProd) {
+        die('Erro de ligação à base de dados. Verifique a configuração (.env).');
+    }
+    die('Database Connection Error: ' . htmlspecialchars($e->getMessage()));
 }

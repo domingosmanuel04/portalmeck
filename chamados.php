@@ -12,6 +12,7 @@ if (!$userId) {
 }
 
 require_once 'api/db.php';
+require_once 'api/security_helpers.php';
 
 $tickets = [];
 $internId = null;
@@ -89,13 +90,13 @@ $error = isset($_GET['error']) ? $_GET['error'] : '';
     <link rel="icon" type="image/png" href="icone.png">
     <title>Meck - Chamados ao RH</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <?php include 'components/head_tags.php'; ?>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             background-color: #101622;
         }
     </style>
@@ -113,9 +114,6 @@ $error = isset($_GET['error']) ? $_GET['error'] : '';
         <!-- Content -->
         <div class="flex-1 flex flex-col overflow-hidden">
             <header class="flex items-center justify-between px-6 py-8 bg-[#101622] border-b border-slate-800">
-                <button @click="sidebarOpen = true" class="text-gray-400 focus:outline-none md:hidden">
-                    <i class="fa-solid fa-bars text-xl"></i>
-                </button>
                 <div class="flex-1 flex justify-between items-center">
                     <h1 class="text-2xl font-semibold text-white hidden md:block">
                         <?= $role === 'estagiario' ? 'Chamados ao RH' : 'Gestão de Chamados' ?>
@@ -196,7 +194,7 @@ $error = isset($_GET['error']) ? $_GET['error'] : '';
                     </h2>
                     <?php if ($role === 'estagiario'): ?>
                         <button @click="modalOpen = true"
-                            class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-5 rounded-xl shadow-md transition-colors flex items-center gap-2">
+                            class="btn btn-primary bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-5 rounded-xl shadow-md transition-colors flex items-center gap-2">
                             <i class="fa-solid fa-plus mr-1"></i> Novo Chamado
                         </button>
                     <?php endif; ?>
@@ -350,6 +348,7 @@ $error = isset($_GET['error']) ? $_GET['error'] : '';
                     </button>
                 </div>
                 <form class="p-6 space-y-4" id="ticket-form" method="POST" action="api/ticket_create.php">
+                                <?= function_exists('meckCsrfField') ? meckCsrfField() : '' ?>
                     <div>
                         <label class="block text-sm font-semibold text-slate-300 mb-1.5">Assunto *</label>
                         <input type="text" name="subject" required
@@ -388,7 +387,7 @@ $error = isset($_GET['error']) ? $_GET['error'] : '';
                             class="py-2.5 px-5 rounded-xl font-semibold text-slate-400 bg-slate-800 hover:bg-slate-700 transition text-sm"
                             :disabled="submitting"><i class="fa-solid fa-xmark mr-1"></i> Cancelar</button>
                         <button type="submit"
-                            class="py-2.5 px-6 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 transition shadow-lg shadow-blue-900/20 flex items-center gap-2 text-sm disabled:opacity-50"
+                            class="btn btn-primary py-2.5 px-6 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 transition shadow-lg shadow-blue-900/20 flex items-center gap-2 text-sm disabled:opacity-50"
                             :disabled="submitting">
                             <i class="fa-solid" :class="submitting ? 'fa-circle-notch fa-spin' : 'fa-paper-plane'"></i>
                             <span x-text="submitting ? 'Enviando...' : 'Enviar Chamado'"></span>
@@ -477,7 +476,7 @@ $error = isset($_GET['error']) ? $_GET['error'] : '';
                             <button @click="replyOpen = false"
                                 class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-400 bg-slate-800 hover:bg-slate-700">Cancelar</button>
                             <button id="send-reply-btn" onclick="submitReply()"
-                                class="px-5 py-2 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-md flex items-center gap-1">
+                                class="btn btn-primary px-5 py-2 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-md flex items-center gap-1">
                                 <i class="fa-solid fa-paper-plane"></i> Enviar
                             </button>
                         </div>

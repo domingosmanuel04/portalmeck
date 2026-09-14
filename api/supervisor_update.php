@@ -3,6 +3,10 @@
 ob_start();
 session_start();
 require_once 'db.php';
+require_once 'security_helpers.php';
+
+meckRequireLogin(true);
+meckRequireCsrf(true);
 
 // Silenciar erros para não quebrar o JSON
 error_reporting(0);

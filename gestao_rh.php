@@ -139,7 +139,7 @@ $overtimes = $pdo->query("
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <?php include 'components/head_tags.php'; ?>
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
         [x-cloak] { display: none !important; }
     </style>
 </head>
@@ -155,16 +155,13 @@ $overtimes = $pdo->query("
             <!-- Top header -->
             <header class="flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
                 <div class="flex items-center gap-4">
-                    <button @click="sidebarOpen = true" class="text-gray-400 focus:outline-none md:hidden">
-                        <i class="fa-solid fa-bars text-xl"></i>
-                    </button>
                     <h1 class="text-xl font-bold text-white hidden md:block">Gestão de RH</h1>
                 </div>
                 <?php include 'components/header_user.php'; ?>
             </header>
 
             <!-- Main dashboard content -->
-            <main class="flex-1 overflow-y-auto p-6 bg-[#0d121d]">
+            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-[#101622] pt-4 px-4 pb-0 flex flex-col">
                 
                 <?php if ($successMessage): ?>
                     <div class="mb-6 p-4 bg-emerald-900/30 text-emerald-400 border border-emerald-800/50 rounded-xl flex items-center gap-3 animate__animated animate__fadeIn">
@@ -180,7 +177,7 @@ $overtimes = $pdo->query("
                             <i class="fa-solid fa-bolt text-amber-400"></i> Ações Rápidas
                         </h2>
                         <div class="grid grid-cols-2 gap-4">
-                            <button @click="vacationModal = true" class="flex flex-col items-center justify-center p-4 bg-blue-600/10 border border-blue-500/20 rounded-xl hover:bg-blue-600/20 transition group">
+                            <button @click="vacationModal = true" class="btn btn-primary flex flex-col items-center justify-center p-4 bg-blue-600/10 border border-blue-500/20 rounded-xl hover:bg-blue-600/20 transition group">
                                 <i class="fa-solid fa-calendar-plus text-2xl text-blue-400 mb-2 group-hover:scale-110 transition"></i>
                                 <span class="text-sm font-medium text-blue-300">Marcar Férias</span>
                             </button>
@@ -356,7 +353,7 @@ $overtimes = $pdo->query("
                         <input type="date" name="end_date" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none" required>
                     </div>
                 </div>
-                <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 transition transform active:scale-95">
+                <button type="submit" class="btn btn-primary w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 transition transform active:scale-95">
                     Confirmar Férias
                 </button>
             </form>

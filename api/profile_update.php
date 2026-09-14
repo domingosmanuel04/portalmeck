@@ -2,17 +2,16 @@
 // api/profile_update.php
 session_start();
 require_once 'db.php';
+require_once 'security_helpers.php';
+
+header('Content-Type: application/json; charset=utf-8');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    exit("Method Not Allowed");
+    meckJsonError('Method Not Allowed', 405);
 }
 
-$userId = $_SESSION['user_id'] ?? null;
-if (!$userId) {
-    echo json_encode(['error' => 'Sessão expirada.']);
-    exit;
-}
+$userId = meckRequireLogin(true);
+meckRequireCsrf(true);
 
 $name = $_POST['name'] ?? '';
 $email = $_POST['email'] ?? '';
@@ -67,16 +66,8 @@ try {
 
     // 4. Handle Photo Upload
     if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
-        $uploadDir = '../uploads/profiles/';
-        if (!is_dir($uploadDir))
-            mkdir($uploadDir, 0777, true);
-
-        $ext = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
-        $filename = uniqid('profile_') . '.' . $ext;
-        $targetPath = $uploadDir . $filename;
-
-        if (move_uploaded_file($_FILES['photo']['tmp_name'], $targetPath)) {
-            $dbPath = 'uploads/profiles/' . $filename;
+        $dbPath = meckStoreProfilePhoto($_FILES['photo']);
+        if ($dbPath) {
             $stmtPhoto = $pdo->prepare("UPDATE users SET photo_url = ? WHERE id = ?");
             $stmtPhoto->execute([$dbPath, $userId]);
             $_SESSION['photo_url'] = $dbPath;

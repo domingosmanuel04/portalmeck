@@ -66,7 +66,7 @@ $departments = $pdo->query("SELECT name FROM departments ORDER BY name ASC")->fe
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <?php include 'components/head_tags.php'; ?>
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
         [x-cloak] { display: none !important; }
     </style>
 </head>
@@ -81,24 +81,21 @@ $departments = $pdo->query("SELECT name FROM departments ORDER BY name ASC")->fe
         <div class="flex-1 flex flex-col overflow-hidden">
             <header class="flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
                 <div class="flex items-center gap-4">
-                    <button @click="sidebarOpen = true" class="text-gray-400 md:hidden">
-                        <i class="fa-solid fa-bars text-xl"></i>
-                    </button>
                     <h1 class="text-xl font-bold text-white">Vagas e Recrutamento</h1>
                 </div>
                 <?php include 'components/header_user.php'; ?>
             </header>
 
-            <main class="flex-1 overflow-y-auto p-6 bg-[#0d121d]">
+            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-[#101622] pt-4 px-4 pb-0 flex flex-col">
 
                 <!-- RH Controls -->
                 <?php if (in_array($role, ['admin', 'rh'])): ?>
                 <div class="flex justify-between items-center mb-8">
                     <div class="flex gap-4">
-                        <button @click="activeTab = 'vagas'" :class="activeTab === 'vagas' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'" class="px-6 py-2 rounded-xl font-bold transition">Vagas</button>
-                        <button @click="activeTab = 'candidaturas'" :class="activeTab === 'candidaturas' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'" class="px-6 py-2 rounded-xl font-bold transition">Candidaturas</button>
+                        <button @click="activeTab = 'vagas'" :class="btn btn-primary activeTab === 'vagas' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'" class="px-6 py-2 rounded-xl font-bold transition">Vagas</button>
+                        <button @click="activeTab = 'candidaturas'" :class="btn btn-primary activeTab === 'candidaturas' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'" class="px-6 py-2 rounded-xl font-bold transition">Candidaturas</button>
                     </div>
-                    <button @click="jobModalOpen = true" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-blue-500/20 transition">
+                    <button @click="jobModalOpen = true" class="btn btn-primary bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-blue-500/20 transition">
                         <i class="fa-solid fa-plus"></i> Nova Vaga
                     </button>
                 </div>
@@ -129,7 +126,7 @@ $departments = $pdo->query("SELECT name FROM departments ORDER BY name ASC")->fe
                                                 <i class="fa-solid fa-check-double"></i> Candidatado
                                             </span>
                                         <?php else: ?>
-                                            <button @click="applyToJob(<?= $job['id'] ?>)" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition shadow-lg shadow-blue-500/20">Candidatar-se</button>
+                                            <button @click="applyToJob(<?= $job['id'] ?>)" class="btn btn-primary bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition shadow-lg shadow-blue-500/20">Candidatar-se</button>
                                         <?php endif; ?>
                                     <?php endif; ?>
 
@@ -251,7 +248,7 @@ $departments = $pdo->query("SELECT name FROM departments ORDER BY name ASC")->fe
                     </div>
                     <div class="pt-4 border-t border-slate-800 flex justify-end gap-3">
                         <button type="button" @click="jobModalOpen = false" class="px-6 py-2 text-slate-500 font-bold hover:text-white transition">Cancelar</button>
-                        <button type="submit" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 transition">Salvar Vaga</button>
+                        <button type="submit" class="btn btn-primary px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 transition">Salvar Vaga</button>
                     </div>
                 </form>
             </div>
@@ -304,7 +301,7 @@ $departments = $pdo->query("SELECT name FROM departments ORDER BY name ASC")->fe
                 <div class="pt-6 border-t border-slate-800 flex justify-end gap-3">
                     <button @click="viewJobModalOpen = false" class="px-6 py-2 text-slate-500 font-bold hover:text-white transition">Fechar</button>
                     <?php if (in_array($role, ['estagiario', 'funcionario'])): ?>
-                    <button @click="viewJobModalOpen = false; applyToJob(selectedJob.id)" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 transition transform active:scale-95">
+                    <button @click="viewJobModalOpen = false; applyToJob(selectedJob.id)" class="btn btn-primary px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 transition transform active:scale-95">
                         Candidatar-se Agora
                     </button>
                     <?php endif; ?>
@@ -341,7 +338,7 @@ $departments = $pdo->query("SELECT name FROM departments ORDER BY name ASC")->fe
 
                     <div class="pt-4 flex justify-end gap-3">
                         <button type="button" @click="applyModalOpen = false" class="px-6 py-2 text-slate-500 font-bold hover:text-white transition">Cancelar</button>
-                        <button type="submit" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 transition transform active:scale-95 flex items-center gap-2">
+                        <button type="submit" class="btn btn-primary px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 transition transform active:scale-95 flex items-center gap-2">
                             <i class="fa-solid fa-paper-plane"></i> Enviar Candidatura
                         </button>
                     </div>
@@ -361,7 +358,7 @@ $departments = $pdo->query("SELECT name FROM departments ORDER BY name ASC")->fe
             </div>
             <div class="p-8 space-y-6">
                 <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
+                    <div class="btn btn-primary w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
                         <i class="fa-solid fa-user-graduate text-white text-xl"></i>
                     </div>
                     <div>
@@ -421,7 +418,7 @@ $departments = $pdo->query("SELECT name FROM departments ORDER BY name ASC")->fe
                             <textarea x-model="selectedApp.interview_notes" rows="3" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Avaliação do candidato durante a entrevista..."></textarea>
                         </div>
                     </div>
-                    <button @click="updateApplication()" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 transition">Salvar Alterações</button>
+                    <button @click="updateApplication()" class="btn btn-primary w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 transition">Salvar Alterações</button>
                 </div>
                 <?php else: ?>
                 <div x-show="selectedApp?.status === 'entrevista'" class="p-6 bg-amber-900/20 border border-amber-800/50 rounded-2xl">

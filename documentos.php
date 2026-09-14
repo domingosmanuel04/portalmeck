@@ -12,6 +12,7 @@ if (!$userId) {
 }
 
 require_once 'api/db.php';
+require_once 'api/security_helpers.php';
 
 // Fetch current user details
 $stmt = $pdo->prepare("
@@ -159,7 +160,7 @@ if ($role !== 'estagiario') {
     <?php include 'components/head_tags.php'; ?>
     <style>
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             background-color: #101622;
         }
     </style>
@@ -176,9 +177,6 @@ if ($role !== 'estagiario') {
         <div class="flex-1 flex flex-col overflow-hidden">
 
             <header class="flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
-                <button @click="sidebarOpen = true" class="text-gray-400 focus:outline-none md:hidden">
-                    <i class="fa-solid fa-bars text-xl"></i>
-                </button>
                 <div class="flex-1 flex justify-between">
                     <h1 class="text-2xl font-semibold text-white hidden md:block">Gestão Documental</h1>
                     <div class="flex items-center gap-6 ml-auto">
@@ -217,7 +215,7 @@ if ($role !== 'estagiario') {
 
                     <?php if ($role !== 'estagiario'): ?>
                         <button @click="modalOpen = true"
-                            class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-5 rounded-lg shadow-md transition-colors flex items-center gap-2">
+                            class="btn btn-primary bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-5 rounded-lg shadow-md transition-colors flex items-center gap-2">
                             <i class="fa-solid fa-upload mr-1"></i> Fazer Upload
                         </button>
                     <?php endif; ?>
@@ -309,11 +307,11 @@ if ($role !== 'estagiario') {
                                     <?= htmlspecialchars($doc['type']) ?>
                                 </span>
                                 <div class="flex gap-2">
-                                    <button @click="openViewer('<?= htmlspecialchars($doc['file_path']) ?>', '<?= htmlspecialchars($doc['title']) ?>')"
+                                    <button @click="openViewer('<?= htmlspecialchars(meckFileUrl($doc['file_path'])) ?>', '<?= htmlspecialchars($doc['title']) ?>')"
                                         class="text-slate-500 hover:text-emerald-400 transition" title="Visualizar">
                                         <i class="fa-solid fa-eye"></i>
                                     </button>
-                                    <a href="<?= htmlspecialchars($doc['file_path']) ?>" download
+                                    <a href="<?= htmlspecialchars(meckFileUrl($doc['file_path'], true)) ?>"
                                         class="text-slate-500 hover:text-blue-400 transition" title="Baixar">
                                         <i class="fa-solid fa-download"></i>
                                     </a>
@@ -392,7 +390,7 @@ if ($role !== 'estagiario') {
                                     *</label>
                                 <select x-model="selectedIntern"
                                     class="w-full bg-slate-900 border border-slate-700 rounded p-3 text-white focus:ring-blue-500 focus:outline-none" required>
-                                    <option value="" class="bg-[#101622]">Selecionar Estagiário...</option>
+                                    <option value="" class="bg-[#101622]">Selecionar colaborador...</option>
                                     <template x-for="intern in interns" :key="intern.id">
                                         <option :value="intern.id" class="bg-[#101622]" x-text="intern.name"></option>
                                     </template>
@@ -446,7 +444,7 @@ if ($role !== 'estagiario') {
                                     <span class="text-xs font-medium text-indigo-400" x-text="uploadProgress + '%'"></span>
                                 </div>
                                 <div class="w-full bg-slate-800 rounded-full h-2">
-                                    <div class="bg-indigo-600 h-2 rounded-full transition-all duration-300" :style="'width: ' + uploadProgress + '%'"></div>
+                                    <div class="btn btn-primary bg-indigo-600 h-2 rounded-full transition-all duration-300" :style="'width: ' + uploadProgress + '%'"></div>
                                 </div>
                             </div>
 
@@ -454,7 +452,7 @@ if ($role !== 'estagiario') {
                                 <button type="button" @click="modalOpen = false" :disabled="isUploading"
                                     class="py-2 px-4 rounded-lg font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 transition disabled:opacity-50"><i class="fa-solid fa-xmark mr-1"></i> Cancelar</button>
                                 <button type="submit" :disabled="isUploading"
-                                    class="py-2 px-6 rounded-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition shadow-lg shadow-indigo-900/20 flex items-center gap-2 disabled:opacity-50">
+                                    class="btn btn-primary py-2 px-6 rounded-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition shadow-lg shadow-indigo-900/20 flex items-center gap-2 disabled:opacity-50">
                                     <i class="fa-solid" :class="isUploading ? 'fa-circle-notch fa-spin' : 'fa-upload'"></i> 
                                     <span x-text="isUploading ? 'Aguarde...' : 'Upload'"></span>
                                 </button>
@@ -502,7 +500,7 @@ if ($role !== 'estagiario') {
                                 <i class="fa-solid fa-external-link"></i> Abrir em Nova Aba
                             </a>
                             <a :href="viewDocPath" download
-                                class="py-2 px-4 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 transition flex items-center gap-2 text-sm">
+                                class="btn btn-primary py-2 px-4 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 transition flex items-center gap-2 text-sm">
                                 <i class="fa-solid fa-download"></i> Baixar
                             </a>
                         </div>

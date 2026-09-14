@@ -1,0 +1,8 @@
+# Exemplos de cron para o Meck RH
+# Editar paths conforme o servidor.
+
+# Backup diário às 02:00
+0 2 * * * cd /var/www/html && php scripts/backup_db.php >> /var/log/meck-backup.log 2>&1
+
+# Verificar SLA de tickets a cada 15 minutos
+*/15 * * * * cd /var/www/html && php scripts/sla_check.php >> /var/log/meck-sla.log 2>&1

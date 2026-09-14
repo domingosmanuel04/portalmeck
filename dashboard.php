@@ -35,7 +35,7 @@ $stats = [
 try {
     // Global stats for everyone (used in intern or admin view)
     $stats['ativos'] = $pdo->query("SELECT COUNT(*) FROM interns WHERE status = 'ativo'")->fetchColumn();
-    $stats['supervisores'] = $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'supervisor'")->fetchColumn();
+    $stats['supervisores'] = $pdo->query("SELECT COUNT(*) FROM users WHERE role IN ('supervisor','tecnico')")->fetchColumn();
 
     if (in_array($role, ['estagiario', 'funcionario'])) {
         // Intern / Staff specific stats
@@ -51,6 +51,18 @@ try {
         $stats['documentos'] = $pdo->query("SELECT COUNT(*) FROM documents")->fetchColumn();
         $stats['pendentes'] = $pdo->query("SELECT COUNT(*) FROM activities WHERE status = 'pendente'")->fetchColumn();
         $stats['em_ferias'] = $pdo->query("SELECT COUNT(*) FROM vacations WHERE CURDATE() BETWEEN start_date AND end_date")->fetchColumn();
+        $stats['tickets_abertos'] = 0;
+        $stats['tickets_sla'] = 0;
+        try {
+            require_once __DIR__ . '/api/intervention_schema.php';
+            interventionEnsureSchema($pdo);
+            $pdo->exec("UPDATE intervention_tickets SET sla_breached = 1
+                WHERE sla_due_at IS NOT NULL AND sla_due_at < NOW()
+                  AND status NOT IN ('resolvido','fechado','cancelado') AND sla_breached = 0");
+            $stats['tickets_abertos'] = (int) $pdo->query("SELECT COUNT(*) FROM intervention_tickets WHERE status IN ('aberto','em_progresso','aguardando')")->fetchColumn();
+            $stats['tickets_sla'] = (int) $pdo->query("SELECT COUNT(*) FROM intervention_tickets WHERE sla_breached = 1 AND status NOT IN ('resolvido','fechado','cancelado')")->fetchColumn();
+        } catch (Throwable $e) {
+        }
     }
 
     // Performance Chart Data (Last 6 Months)
@@ -121,7 +133,7 @@ try {
     <?php include 'components/head_tags.php'; ?>
     <style>
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             background-color: #101622;
         }
 
@@ -210,9 +222,6 @@ try {
         <div class="flex flex-col flex-1 overflow-hidden">
             <!-- Top header -->
             <header class="flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
-                <button @click="sidebarOpen = true" class="text-gray-400 focus:outline-none md:hidden">
-                    <i class="fa-solid fa-bars text-xl"></i>
-                </button>
                 <div class="flex-1 px-4 md:px-0 flex justify-between">
                     <h1 class="text-2xl font-semibold text-white hidden md:block">Visão Geral</h1>
                     <div class="flex items-center gap-6 ml-auto">
@@ -224,7 +233,7 @@ try {
             <!-- Main Workspace -->
             <main class="flex-1 overflow-x-hidden overflow-y-auto bg-[#101622] pt-4 px-4 pb-0 flex flex-col">
 
-                <div class="animate__animated animate__fadeIn max-w-7xl mx-auto w-full">
+                <div class="animate__animated animate__fadeIn w-full">
 
                     <!-- Interview Alert -->
                     <?php if ($upcomingInterview): ?>
@@ -245,6 +254,21 @@ try {
                             </div>
                             <a href="vagas.php" class="bg-white text-slate-900 font-black px-6 py-3 rounded-xl hover:bg-amber-100 transition shadow-lg shadow-white/10">Ver Detalhes</a>
                         </div>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php if (!in_array($role, ['estagiario', 'funcionario'], true) && !empty($stats['tickets_abertos'])): ?>
+                    <div class="mb-6 p-5 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h3 class="text-white font-bold">Tickets técnicos</h3>
+                            <p class="text-sm text-slate-300">
+                                <?= (int) $stats['tickets_abertos'] ?> em aberto
+                                <?php if (!empty($stats['tickets_sla'])): ?>
+                                    · <span class="text-amber-300 font-semibold"><?= (int) $stats['tickets_sla'] ?> com SLA incumprido</span>
+                                <?php endif; ?>
+                            </p>
+                        </div>
+                        <a href="tickets_intervencao.php" class="btn btn-primary px-5 py-2.5 rounded-xl text-sm">Abrir tickets</a>
                     </div>
                     <?php endif; ?>
 
@@ -382,6 +406,7 @@ try {
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intro.js@7.2.0/minified/introjs.min.css">
     <script src="https://cdn.jsdelivr.net/npm/intro.js@7.2.0/intro.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -443,8 +468,48 @@ try {
                 }
             });
 
-            // Intro.js Onboarding Logic
+            // Intro.js Onboarding — só com elementos que existem (evita tour “bugado”)
             const runOnboarding = () => {
+                if (typeof introJs !== 'function') return;
+
+                const candidates = [
+                    {
+                        title: 'Bem-vindo ao Meck!',
+                        intro: 'Centro de comando para gestão de colaboradores, avaliações, chat, reuniões e gravações.'
+                    },
+                    {
+                        element: document.querySelector('#sidebar-nav'),
+                        title: 'Navegação',
+                        intro: 'Aceda a Funcionários, Atividades, Relatórios, Chat, Reunião, Gravações e MeckLittle.',
+                        position: 'right'
+                    },
+                    {
+                        element: document.querySelector('[data-step="2"]'),
+                        title: 'O Seu Painel',
+                        intro: 'O Dashboard reúne as métricas mais importantes da equipa.',
+                        position: 'right'
+                    },
+                    {
+                        element: document.querySelector('#performanceChart')?.closest('.rounded-2xl, .rounded-xl, .bg-\\[\\#101622\\]') || document.getElementById('performanceChart'),
+                        title: 'Performance em Tempo Real',
+                        intro: 'Acompanhe a evolução do desempenho global neste gráfico.',
+                        position: 'bottom'
+                    },
+                    {
+                        element: document.querySelector('#user-menu, .header-user, [data-user-menu]') || document.querySelector('.flex.items-center.gap-6.ml-auto'),
+                        title: 'O Seu Espaço',
+                        intro: 'Perfil, foto e notificações — incluindo convites de reunião.',
+                        position: 'bottom'
+                    },
+                    {
+                        title: 'Tudo Pronto!',
+                        intro: 'Explore Chat, Reunião e a pasta Gravações para as chamadas. Bom trabalho!'
+                    }
+                ];
+
+                const steps = candidates.filter((step) => !step.element || (step.element instanceof Element && step.element.isConnected));
+                if (!steps.length) return;
+
                 introJs().setOptions({
                     nextLabel: 'Próximo',
                     prevLabel: 'Anterior',
@@ -453,51 +518,12 @@ try {
                     hidePrev: true,
                     showBullets: true,
                     showProgress: true,
-                    exitOnOverlayClick: false,
-                    steps: [
-                        {
-                            title: 'Bem-vindo ao Meck! 🚀',
-                            intro: 'Estamos entusiasmados por tê-lo connosco! Vamos explorar o seu novo centro de comando para gestão de estágios.'
-                        },
-                        {
-                            element: document.querySelector('#sidebar-nav'),
-                            title: 'Navegação Inteligente 🧭',
-                            intro: 'Aqui está o coração da sua navegação. Mude entre estagiários, grupos e atividades com um único clique.',
-                            position: 'right'
-                        },
-                        {
-                            element: document.querySelector('[data-step="2"]'),
-                            title: 'O Seu Painel 📊',
-                            intro: 'Esta é a sua base. O Dashboard reúne as métricas mais importantes para que não perca nenhum detalhe.',
-                            position: 'right'
-                        },
-                        {
-                            element: document.querySelector('.lg\\:col-span-2.bg-\\[\\#101622\\]'),
-                            title: 'Performance em Tempo Real 📈',
-                            intro: 'Acompanhe a evolução do desempenho global através deste gráfico interativo. Veja o crescimento acontecer mês a mês!',
-                            position: 'bottom'
-                        },
-                        {
-                            element: document.querySelector('.bg-\\[\\#101622\\]:last-of-type'),
-                            title: 'Pulso da Equipa ⚡',
-                            intro: 'Fique por dentro das últimas atualizações. Aqui aparecem as atividades mais recentes para manter o fluxo de trabalho ativo.',
-                            position: 'left'
-                        },
-                        {
-                            element: document.querySelector('.flex.items-center.gap-6.ml-auto'),
-                            title: 'O Seu Espaço 👤',
-                            intro: 'Personalize o seu perfil, mude a sua foto e controle as suas notificações. Este sistema é seu!',
-                            position: 'bottom'
-                        },
-                        {
-                            title: 'Tudo Pronto! ✨',
-                            intro: 'O tour terminou, mas a sua jornada apenas começou. Bom trabalho!'
-                        }
-                    ]
+                    exitOnOverlayClick: true,
+                    disableInteraction: true,
+                    steps
                 }).start();
             };
 
-            // Trigger onboarding if it's the first time or via a button (could be added later)
             if (!localStorage.getItem('meck_onboarding_done')) {
                 setTimeout(() => {
                     runOnboarding();

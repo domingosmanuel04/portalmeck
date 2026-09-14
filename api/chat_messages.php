@@ -78,7 +78,17 @@ try {
         $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    echo json_encode(['success' => true, 'messages' => $messages ?? []]);
+    foreach ($messages as &$m) {
+        if (!empty($m['attachment'])) {
+            $path = $m['attachment'];
+            if (strpos($path, 'api/serve_file.php') !== 0) {
+                $m['attachment'] = 'api/serve_file.php?f=' . rawurlencode(ltrim($path, '/'));
+            }
+        }
+    }
+    unset($m);
+
+    echo json_encode(['success' => true, 'messages' => $messages ?? []], JSON_UNESCAPED_UNICODE);
 } catch (PDOException $e) {
     ob_end_clean();
     http_response_code(500);

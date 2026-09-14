@@ -6,6 +6,7 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 require_once 'api/db.php';
+require_once 'api/security_helpers.php';
 
 $userId = $_SESSION['user_id'];
 $role = $_SESSION['role'] ?? 'estagiario';
@@ -231,7 +232,7 @@ try {
     <?php include 'components/head_tags.php'; ?>
     <style>
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             background-color: #101622;
         }
     </style>
@@ -253,9 +254,6 @@ try {
         <div class="flex-1 flex flex-col overflow-hidden">
 
             <header class="flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
-                <button @click="sidebarOpen = true" class="text-gray-400 focus:outline-none md:hidden">
-                    <i class="fa-solid fa-bars text-xl"></i>
-                </button>
                 <div class="flex-1 flex justify-between">
                     <h1 class="text-2xl font-semibold text-white hidden md:block">Gestão de Funcionários</h1>
                     <div class="flex items-center gap-6 ml-auto">
@@ -298,7 +296,7 @@ try {
                     <!-- Add Button -->
                     <?php if ($role === 'admin'): ?>
                         <button @click="modalOpen = true"
-                            class="whitespace-nowrap bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 active:scale-95">
+                            class="btn btn-primary whitespace-nowrap bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 active:scale-95">
                             <i class="fa-solid fa-user-plus"></i> Novo Funcionário
                         </button>
                     <?php endif; ?>
@@ -329,7 +327,7 @@ try {
                                             <p class="font-semibold text-white"><?= htmlspecialchars($intern['name']) ?>
                                             </p>
                                             <p class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 inline-block uppercase font-bold tracking-wider mt-1">
-                                                <?= ($intern['employee_type'] ?? 'estagiario') === 'efectivo' ? 'Efectivo' : 'Estagiário' ?>
+                                                <?= ($intern['employee_type'] ?? 'estagiario') === 'efectivo' ? 'Efectivo' : 'Colaborador' ?>
                                             </p>
                                         </div>
                                     </td>
@@ -368,13 +366,6 @@ try {
                                                 title="Enviar Mensagem">
                                                 <i class="fa-solid fa-comment"></i>
                                             </button>
-                                            <?php if ($role !== 'estagiario'): ?>
-                                                <button @click="analyzeIntern(<?= $intern['intern_id'] ?>)"
-                                                    class="p-2 text-emerald-400 hover:bg-emerald-900/20 rounded-lg transition-colors"
-                                                    title="Análise Inteligente (IA)">
-                                                    <i class="fa-solid fa-robot"></i>
-                                                </button>
-                                            <?php endif; ?>
                                             <?php if ($role === 'admin'): ?>
                                                 <button @click="editIntern(<?= $intern['intern_id'] ?>)"
                                                     class="p-2 text-amber-400 hover:bg-slate-800 rounded-lg transition-colors">
@@ -444,6 +435,7 @@ try {
                         <!-- Scrollable Form Container -->
                         <div class="px-6 py-4 overflow-y-auto bg-[#101622]">
                             <form action="api/intern_create.php" method="POST" enctype="multipart/form-data">
+                                <?= function_exists('meckCsrfField') ? meckCsrfField() : '' ?>
 
                                 <!-- Groups: Pessoal -->
                                 <div class="mb-4 text-blue-400 font-semibold border-b border-slate-800 pb-1">
@@ -510,7 +502,7 @@ try {
                                         <label class="block text-sm font-medium text-slate-400 mb-1">Vínculo *</label>
                                         <select name="employee_type" required
                                             class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-white focus:border-blue-500 outline-none">
-                                            <option value="estagiario">Estagiário</option>
+                                            <option value="estagiario">Colaborador</option>
                                             <option value="efectivo">Efectivo</option>
                                         </select>
                                     </div>
@@ -607,7 +599,7 @@ try {
                                     <button type="button" @click="modalOpen = false"
                                         class="py-2 px-4 rounded-lg font-medium text-slate-400 bg-slate-800 hover:bg-slate-700 transition"><i class="fa-solid fa-xmark mr-1"></i> Cancelar</button>
                                     <button type="submit"
-                                        class="py-2 px-6 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition"><i class="fa-solid fa-floppy-disk mr-1"></i> Salvar</button>
+                                        class="btn btn-primary py-2 px-6 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition"><i class="fa-solid fa-floppy-disk mr-1"></i> Salvar</button>
                                 </div>
                             </form>
                         </div>
@@ -644,7 +636,7 @@ try {
                 <div class="grid grid-cols-2 gap-y-6 gap-x-8 py-6 border-y border-slate-800">
                     <div>
                         <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Vínculo</p>
-                        <p class="font-semibold text-slate-300" x-text="activeIntern?.employee_type === 'efectivo' ? 'Efectivo' : 'Estagiário'"></p>
+                        <p class="font-semibold text-slate-300" x-text="activeIntern?.employee_type === 'efectivo' ? 'Efectivo' : 'Colaborador'"></p>
                     </div>
                     <div>
                         <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Cargo</p>
@@ -690,7 +682,7 @@ try {
 
                 <div class="mt-6 flex justify-end">
                     <button @click="viewModalOpen = false"
-                        class="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-500/30 border border-blue-800 flex items-center gap-2">
+                        class="btn btn-primary px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-500/30 border border-blue-800 flex items-center gap-2">
                         <i class="fa-solid fa-xmark mr-1"></i> Fechar
                     </button>
                 </div>
@@ -783,7 +775,7 @@ try {
                             <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Vínculo *</label>
                             <select x-model="editForm.employee_type" required
                                 class="w-full bg-slate-900 border-2 border-slate-800 rounded-xl p-3 text-white focus:border-blue-500 outline-none transition-all font-medium">
-                                <option value="estagiario">Estagiário</option>
+                                <option value="estagiario">Colaborador</option>
                                 <option value="efectivo">Efectivo</option>
                             </select>
                         </div>
@@ -905,7 +897,7 @@ try {
                         <button type="button" @click="editModalOpen = false"
                             class="px-6 py-3 font-bold text-slate-500 hover:text-slate-400 transition"><i class="fa-solid fa-xmark mr-1"></i> Cancelar</button>
                         <button type="submit"
-                            class="px-10 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-500/30 active:scale-95 flex items-center gap-2">
+                            class="btn btn-primary px-10 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-500/30 active:scale-95 flex items-center gap-2">
                             <i class="fa-solid fa-floppy-disk mr-1"></i> Atualizar
                         </button>
                     </div>
@@ -926,9 +918,6 @@ try {
                 viewModalOpen: false,
                 editModalOpen: false,
                 activeIntern: null,
-                aiModalOpen: false,
-                aiAnalysis: null,
-                aiLoading: false,
                 confirmModal: false,
                 confirmMessage: '',
                 confirmCallback: null,
@@ -965,27 +954,6 @@ try {
                         this.editForm = { ...data };
                         this.editModalOpen = true;
                     } catch (e) { MeckNotifications.error("Erro", "Erro ao carregar dados: " + e.message); }
-                },
-
-                async analyzeIntern(id) {
-                    this.aiLoading = true;
-                    this.aiAnalysis = null;
-                    this.aiModalOpen = true;
-                    try {
-                        let res = await fetch(`api/ai_intern_analysis.php?intern_id=${id}`);
-                        let data = await res.json();
-                        if (data.success) {
-                            this.aiAnalysis = data.data;
-                        } else {
-                            MeckNotifications.error("Erro", data.error);
-                            this.aiModalOpen = false;
-                        }
-                    } catch (e) { 
-                        MeckNotifications.error("Erro", "Erro ao realizar análise IA."); 
-                        this.aiModalOpen = false;
-                    } finally {
-                        this.aiLoading = false;
-                    }
                 },
 
                 async updateIntern() {
@@ -1038,88 +1006,6 @@ try {
         }
     </script>
 
-    <!-- AI Analysis Modal -->
-    <div x-show="aiModalOpen" x-cloak
-        class="fixed inset-0 z-[150] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate__animated animate__fadeIn animate__faster">
-        <div @click.away="aiModalOpen = false"
-            class="bg-[#101622] rounded-3xl shadow-2xl w-full max-w-2xl border border-indigo-500/30 overflow-hidden animate__animated animate__zoomIn animate__faster">
-            
-            <div class="px-8 py-6 border-b border-slate-800 bg-indigo-900/10 flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                        <i class="fa-solid fa-robot text-white text-xl"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-xl font-bold text-white">Análise OnMeck</h2>
-                        <p class="text-xs text-indigo-400 font-medium tracking-wider uppercase">Avaliação de Desempenho Automatizada</p>
-                    </div>
-                </div>
-                <button @click="aiModalOpen = false" class="text-slate-500 hover:text-white transition-colors">
-                    <i class="fa-solid fa-xmark text-2xl"></i>
-                </button>
-            </div>
-
-            <div class="p-8">
-                <!-- Loading State -->
-                <div x-show="aiLoading" class="flex flex-col items-center justify-center py-12">
-                    <div class="relative w-20 h-20 mb-6">
-                        <div class="absolute inset-0 border-4 border-indigo-500/20 rounded-full"></div>
-                        <div class="absolute inset-0 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                        <div class="absolute inset-0 flex items-center justify-center">
-                            <i class="fa-solid fa-brain text-indigo-500 text-2xl animate-pulse"></i>
-                        </div>
-                    </div>
-                    <p class="text-indigo-400 font-medium animate-pulse">Processando dados de presença, atividades e avaliações...</p>
-                </div>
-
-                <!-- Content State -->
-                <div x-show="!aiLoading && aiAnalysis" class="space-y-8">
-                    <div class="flex items-center justify-between p-4 bg-slate-900/50 rounded-2xl border border-slate-800">
-                        <div class="text-center flex-1 border-r border-slate-800">
-                            <p class="text-xs font-bold text-slate-500 uppercase mb-1">Assiduidade</p>
-                            <p class="text-2xl font-bold text-white" x-text="aiAnalysis?.stats.presence + '%'"></p>
-                        </div>
-                        <div class="text-center flex-1 border-r border-slate-800">
-                            <p class="text-xs font-bold text-slate-500 uppercase mb-1">Tarefas</p>
-                            <p class="text-2xl font-bold text-white" x-text="aiAnalysis?.stats.activities + '%'"></p>
-                        </div>
-                        <div class="text-center flex-1">
-                            <p class="text-xs font-bold text-slate-500 uppercase mb-1">Performance</p>
-                            <p class="text-2xl font-bold text-indigo-400" x-text="aiAnalysis?.stats.performance + '/20'"></p>
-                        </div>
-                    </div>
-
-                    <div class="space-y-3">
-                        <h3 class="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                            <i class="fa-solid fa-microchip text-indigo-500"></i> Análise de Comportamento
-                        </h3>
-                        <div class="p-5 bg-indigo-900/10 border border-indigo-500/20 rounded-2xl text-slate-200 leading-relaxed italic" x-text="aiAnalysis?.analysis"></div>
-                    </div>
-
-                    <div class="space-y-4">
-                        <h3 class="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                            <i class="fa-solid fa-lightbulb text-amber-500"></i> Recomendações da IA
-                        </h3>
-                        <div class="grid gap-3">
-                            <template x-for="rec in aiAnalysis?.recommendations">
-                                <div class="flex items-center gap-3 p-4 bg-slate-900/50 rounded-xl border border-slate-800 transition-all hover:border-indigo-500/30">
-                                    <i class="fa-solid fa-check-circle text-indigo-500"></i>
-                                    <span class="text-sm font-medium text-slate-300" x-text="rec"></span>
-                                </div>
-                            </template>
-                        </div>
-                    </div>
-
-                    <div class="flex justify-end pt-4">
-                        <button @click="aiModalOpen = false" 
-                            class="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition shadow-lg shadow-indigo-500/20 flex items-center gap-2">
-                            <i class="fa-solid fa-check"></i> Concluído
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 </body>
 
 </html>

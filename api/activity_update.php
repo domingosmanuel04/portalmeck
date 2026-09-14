@@ -2,6 +2,12 @@
 // api/activity_update.php - Update activity details
 session_start();
 require_once 'db.php';
+require_once 'security_helpers.php';
+require_once 'activity_access.php';
+
+
+meckRequireLogin(true);
+meckRequireCsrf(true);
 
 header('Content-Type: application/json');
 
@@ -11,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$userId = $_SESSION['user_id'] ?? null;
+$userId = (int) ($_SESSION['user_id'] ?? 0);
 $role = $_SESSION['role'] ?? 'guest';
 
 if (!$userId) {
@@ -20,44 +26,69 @@ if (!$userId) {
     exit;
 }
 
-$activityId = $_POST['activity_id'] ?? null;
+$activityId = (int) ($_POST['activity_id'] ?? 0);
 $title = trim($_POST['title'] ?? '');
 $description = trim($_POST['description'] ?? '');
 $deadline = $_POST['deadline'] ?? null;
+$status = $_POST['status'] ?? null;
+$mode = $_POST['mode'] ?? 'full'; // full | description
+$validStatuses = ['pendente', 'em_andamento', 'concluido'];
 
-if (!$activityId || !$title) {
+if ($activityId < 1) {
     http_response_code(400);
     echo json_encode(['error' => 'Dados inválidos.']);
     exit;
 }
 
 try {
-    // Check permission - only creator or admin/RH can edit
-    $stmtCheck = $pdo->prepare("SELECT created_by FROM activities WHERE id = ?");
-    $stmtCheck->execute([$activityId]);
-    $activity = $stmtCheck->fetch();
+    activityEnsureSchema($pdo);
 
+    $activity = activityUserCanAccess($pdo, $activityId, $userId, $role);
     if (!$activity) {
-        http_response_code(404);
-        echo json_encode(['error' => 'Atividade não encontrada.']);
-        exit;
-    }
-
-    $isCreator = $activity['created_by'] == $userId;
-    $isAdmin = in_array($role, ['admin', 'rh']);
-
-    if (!$isCreator && !$isAdmin) {
         http_response_code(403);
-        echo json_encode(['error' => 'Sem permissão para editar esta atividade.']);
+        echo json_encode(['error' => 'Sem permissão ou atividade inexistente.']);
         exit;
     }
 
-    $stmt = $pdo->prepare("UPDATE activities SET title = ?, description = ?, deadline = ? WHERE id = ?");
-    $stmt->execute([$title, $description, $deadline, $activityId]);
+    $canManage = activityUserCanManage($activity, $userId, $role);
+
+    // Qualquer utilizador com acesso: só descrição
+    if ($mode === 'description' || ! $canManage) {
+        if (! $canManage && $mode === 'full') {
+            http_response_code(403);
+            echo json_encode(['error' => 'Apenas admin ou supervisor pode editar a tarefa.']);
+            exit;
+        }
+
+        $stmt = $pdo->prepare('UPDATE activities SET description = ? WHERE id = ?');
+        $stmt->execute([$description, $activityId]);
+        echo json_encode(['success' => true, 'message' => 'Descrição atualizada.', 'mode' => 'description']);
+        exit;
+    }
+
+    if ($title === '') {
+        http_response_code(400);
+        echo json_encode(['error' => 'O título é obrigatório.']);
+        exit;
+    }
+
+    if ($status && in_array($status, $validStatuses, true)) {
+        $progress = 0;
+        if ($status === 'em_andamento') {
+            $progress = 50;
+        }
+        if ($status === 'concluido') {
+            $progress = 100;
+        }
+        $stmt = $pdo->prepare('UPDATE activities SET title = ?, description = ?, deadline = ?, status = ?, progress_percentage = ? WHERE id = ?');
+        $stmt->execute([$title, $description, $deadline, $status, $progress, $activityId]);
+    } else {
+        $stmt = $pdo->prepare('UPDATE activities SET title = ?, description = ?, deadline = ? WHERE id = ?');
+        $stmt->execute([$title, $description, $deadline, $activityId]);
+    }
 
     echo json_encode(['success' => true, 'message' => 'Atividade atualizada com sucesso.']);
 } catch (PDOException $e) {
     http_response_code(500);
     echo json_encode(['error' => 'Erro: ' . $e->getMessage()]);
 }
-?>

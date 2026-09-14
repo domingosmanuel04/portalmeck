@@ -1,0 +1,31 @@
+; cPanel-generated php ini directives, do not edit
+; Manual editing of this file may result in unexpected behavior.
+; To make changes to this file, use the cPanel MultiPHP INI Editor (Home >> Software >> MultiPHP INI Editor)
+; For more information, read our documentation (https://go.cpanel.net/EA4ModifyINI)
+
+extension_dir = "C:\Users\Milton\AppData\Local\Microsoft\WinGet\Packages\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\ext"
+extension=pdo_mysql
+extension=mysqli
+extension=openssl
+extension=mbstring
+extension=curl
+extension=fileinfo
+extension=gd
+extension=intl
+extension=zip
+allow_url_fopen = On
+display_errors = Off
+enable_dl = Off
+file_uploads = On
+max_execution_time = 600
+max_input_time = 600
+max_input_vars = 8000
+memory_limit = 512M
+post_max_size = 128M
+session.gc_maxlifetime = 1440
+session.cookie_httponly = 1
+session.cookie_samesite = Lax
+session.use_strict_mode = 1
+upload_max_filesize = 100M
+zlib.output_compression = Off
+expose_php = Off

@@ -2,7 +2,11 @@
 // api/jobs.php
 session_start();
 require_once 'db.php';
+require_once 'security_helpers.php';
 require_once 'notifications_helper.php';
+
+meckRequireLogin(true);
+meckRequireCsrf(true);
 
 if (!isset($_SESSION['user_id'])) {
     http_response_code(401);
@@ -72,7 +76,7 @@ try {
         $stmtInt->execute([$userId]);
         $intern = $stmtInt->fetch();
         
-        if (!$intern) throw new Exception("Perfil de estagiário não encontrado.");
+        if (!$intern) throw new Exception("Perfil de colaborador não encontrado.");
         $internId = $intern['id'];
 
         // Check if already applied

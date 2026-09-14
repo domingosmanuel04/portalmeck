@@ -1,0 +1,35 @@
+# Ambiente
+.env
+.env.local
+.env.*.local
+
+# Dependências / IDE
+/vendor/
+/.idea/
+/.vscode/
+*.swp
+*.swo
+
+# Runtime
+/tmp/*
+!/tmp/.gitkeep
+/backups/*
+!/backups/.gitkeep
+!/backups/.gitignore
+
+# Uploads e gravações (não versionar conteúdo)
+/uploads/**/*
+!/uploads/.gitkeep
+!/uploads/**/.gitkeep
+/gravacoes/**/*
+!/gravacoes/.gitkeep
+!/gravacoes/**/.gitkeep
+!/gravacoes/.htaccess
+
+# Sessões / caches
+/tmp/sess_*
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

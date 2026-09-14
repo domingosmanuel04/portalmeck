@@ -3,6 +3,10 @@
 ob_start();
 session_start();
 require_once 'db.php';
+require_once 'security_helpers.php';
+
+meckRequireLogin(true);
+meckRequireCsrf(true);
 
 // Silenciar erros para não quebrar o JSON
 error_reporting(0);
@@ -29,7 +33,11 @@ $email = $_POST['email'] ?? '';
 $phone = $_POST['phone'] ?? '';
 $department = $_POST['department'] ?? '';
 $internship_area = $_POST['internship_area'] ?? '';
-$password = (!empty($_POST['password'])) ? $_POST['password'] : 'supervisor123'; 
+$password = (!empty($_POST['password'])) ? $_POST['password'] : 'supervisor123';
+$staffRole = $_POST['role'] ?? 'supervisor';
+if (!in_array($staffRole, ['supervisor', 'tecnico', 'rh'], true)) {
+    $staffRole = 'supervisor';
+}
 
 if (empty($name) || empty($email)) {
     echo json_encode(["error" => "Por favor, preencha todos os campos obrigatórios."]);
@@ -38,10 +46,10 @@ if (empty($name) || empty($email)) {
 
 try {
     $password_hash = password_hash($password, PASSWORD_DEFAULT);
-    $stmt = $pdo->prepare("INSERT INTO users (name, email, phone, department, internship_area, password_hash, role) VALUES (?, ?, ?, ?, ?, ?, 'supervisor')");
-    $stmt->execute([$name, $email, $phone, $department, $internship_area, $password_hash]);
+    $stmt = $pdo->prepare("INSERT INTO users (name, email, phone, department, internship_area, password_hash, role) VALUES (?, ?, ?, ?, ?, ?, ?)");
+    $stmt->execute([$name, $email, $phone, $department, $internship_area, $password_hash, $staffRole]);
 
-    echo json_encode(["success" => true, "message" => "Supervisor cadastrado com sucesso!"]);
+    echo json_encode(["success" => true, "message" => ucfirst($staffRole) . " cadastrado com sucesso!"]);
     ob_end_flush();
     exit;
 

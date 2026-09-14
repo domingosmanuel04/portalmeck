@@ -68,7 +68,7 @@ if ($role !== 'estagiario') {
     <?php include 'components/head_tags.php'; ?>
     <style>
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             background-color: #101622;
         }
 
@@ -89,9 +89,6 @@ if ($role !== 'estagiario') {
         <div class="flex-1 flex flex-col overflow-hidden">
 
             <header class="flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
-                <button @click="sidebarOpen = true" class="text-gray-400 focus:outline-none md:hidden">
-                    <i class="fa-solid fa-bars text-xl"></i>
-                </button>
                 <div class="flex-1 flex justify-between">
                     <h1 class="text-2xl font-semibold text-white hidden md:block">Controlo de Presenças</h1>
                     <?php include 'components/header_user.php'; ?>
@@ -138,7 +135,7 @@ if ($role !== 'estagiario') {
                                 </button>
                             <?php else: ?>
                                 <button @click="openManualModal()"
-                                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-2xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 active:scale-95">
+                                    class="btn btn-primary bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-2xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 active:scale-95">
                                     <i class="fa-solid fa-hand mr-1"></i> Registo Manual
                                 </button>
                             <?php endif; ?>
@@ -153,7 +150,7 @@ if ($role !== 'estagiario') {
                                 <thead
                                     class="bg-slate-900/50 text-slate-500 border-b border-slate-800 text-[11px] font-black uppercase tracking-[0.2em]">
                                     <tr>
-                                        <th class="px-8 py-6">Estagiário</th>
+                                        <th class="px-8 py-6">Colaborador</th>
                                         <th class="px-8 py-6 text-center">Data</th>
                                         <th class="px-8 py-6 text-center">Entrada</th>
                                         <th class="px-8 py-6 text-center">Saída</th>
@@ -175,7 +172,7 @@ if ($role !== 'estagiario') {
                                                 <div>
                                                     <p class="font-black text-white text-base tracking-tighter" x-text="row.name"></p>
                                                     <p class="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5"
-                                                        x-text="row.dept_name || 'Estagiário'"></p>
+                                                        x-text="row.dept_name || 'Colaborador'"></p>
                                                 </div>
                                             </td>
                                             <td class="px-8 py-6 text-center text-slate-400 font-bold"
@@ -249,7 +246,7 @@ if ($role !== 'estagiario') {
                                     <template x-for="p in pagination.totalPages" :key="p">
                                         <button x-show="p === 1 || p === pagination.totalPages || (p >= pagination.currentPage - 1 && p <= pagination.currentPage + 1)"
                                             @click="changePage(p)"
-                                            :class="p === pagination.currentPage ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-slate-800/50 text-slate-400 hover:bg-slate-800'"
+                                            :class="btn btn-primary p === pagination.currentPage ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-slate-800/50 text-slate-400 hover:bg-slate-800'"
                                             class="w-10 h-10 rounded-xl transition-all font-black text-xs flex items-center justify-center"
                                             x-text="p">
                                         </button>
@@ -285,10 +282,10 @@ if ($role !== 'estagiario') {
                                 <div class="space-y-5">
                                     <div x-show="!isEditing">
                                         <label
-                                            class="block text-xs font-bold text-slate-500 uppercase mb-2">Estagiário</label>
+                                            class="block text-xs font-bold text-slate-500 uppercase mb-2">Colaborador</label>
                                         <select x-model="manualForm.intern_id" :required="!isEditing"
                                             class="w-full bg-slate-900 border-2 border-slate-800 rounded-xl p-3 text-white focus:border-blue-500 focus:ring-0 transition-all font-medium">
-                                            <option value="" class="bg-[#101622]">Selecionar Estagiário...</option>
+                                            <option value="" class="bg-[#101622]">Selecionar colaborador...</option>
                                             <?php foreach ($interns_list as $int): ?>
                                                 <option value="<?= $int['id'] ?>" class="bg-[#101622]"><?= htmlspecialchars($int['name']) ?>
                                                 </option>
@@ -296,7 +293,7 @@ if ($role !== 'estagiario') {
                                         </select>
                                     </div>
                                     <div x-show="isEditing">
-                                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Estagiário</label>
+                                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Colaborador</label>
                                         <p class="w-full bg-slate-900 border-2 border-slate-800 rounded-xl p-3 text-slate-400 font-medium" x-text="editingName"></p>
                                     </div>
 
@@ -362,7 +359,7 @@ if ($role !== 'estagiario') {
                                     <button type="button" @click="modalOpen = false"
                                         class="px-6 py-3 font-bold text-slate-500 hover:text-slate-400 transition"><i class="fa-solid fa-xmark mr-1"></i> Cancelar</button>
                                     <button type="submit"
-                                        class="px-10 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-900/20 active:scale-95 flex items-center gap-2">
+                                        class="btn btn-primary px-10 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-900/20 active:scale-95 flex items-center gap-2">
                                         <i x-show="!manualLoading" class="fa-solid fa-floppy-disk mr-1"></i>
                                         <i x-show="manualLoading" class="fa-solid fa-circle-notch fa-spin mr-1"></i>
                                         <span x-text="manualLoading ? 'A processar...' : (isEditing ? 'Atualizar' : 'Salvar')"></span>
