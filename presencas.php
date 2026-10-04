@@ -54,6 +54,26 @@ if ($role !== 'estagiario') {
         ")->fetchAll(PDO::FETCH_ASSOC);
     }
 }
+
+// Early Warning System: Fetch users with 3+ absences or delays this month
+$earlyWarnings = [];
+if ($role !== 'estagiario') {
+    try {
+        $firstDayMonth = date('Y-m-01');
+        $stmtW = $pdo->prepare("
+            SELECT u.name, i.department, COUNT(a.id) as late_count
+            FROM attendance a
+            JOIN interns i ON a.intern_id = i.id
+            JOIN users u ON i.user_id = u.id
+            WHERE a.date >= ? AND a.status IN ('atraso', 'ausente')
+            GROUP BY a.intern_id, u.name, i.department
+            HAVING late_count >= 3
+            ORDER BY late_count DESC
+        ");
+        $stmtW->execute([$firstDayMonth]);
+        $earlyWarnings = $stmtW->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {}
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-PT" class="h-full bg-[#101622]">
@@ -88,7 +108,7 @@ if ($role !== 'estagiario') {
         <!-- Content -->
         <div class="flex-1 flex flex-col overflow-hidden">
 
-            <header class="flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
+            <header class="relative z-[9999] flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
                 <div class="flex-1 flex justify-between">
                     <h1 class="text-2xl font-semibold text-white hidden md:block">Controlo de Presenças</h1>
                     <?php include 'components/header_user.php'; ?>
@@ -97,6 +117,27 @@ if ($role !== 'estagiario') {
 
             <main class="flex-1 overflow-x-hidden overflow-y-auto bg-[#101622] pt-4 px-4 pb-0 relative flex flex-col">
                 <div class="w-full">
+                    <?php if (!empty($earlyWarnings)): ?>
+                        <div class="mb-6 p-4 rounded-2xl bg-amber-950/40 border border-amber-500/40 flex items-start gap-4 shadow-lg animate__animated animate__fadeIn">
+                            <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/30">
+                                <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="font-bold text-amber-300 text-sm">Alerta Preditivo de Assiduidade (Early Warning System)</h3>
+                                <p class="text-xs text-amber-200/80 mt-0.5">Foi detetado um padrão de risco de atrasos/faltas (3 ou mais registos este mês) nos seguintes colaboradores:</p>
+                                <div class="flex flex-wrap gap-2 mt-2.5">
+                                    <?php foreach ($earlyWarnings as $ew): ?>
+                                        <span class="px-3 py-1 rounded-xl bg-amber-900/60 border border-amber-500/30 text-xs font-bold text-white flex items-center gap-2">
+                                            <i class="fa-solid fa-user text-amber-400 text-[10px]"></i>
+                                            <?= htmlspecialchars($ew['name']) ?>
+                                            <span class="px-1.5 py-0.5 rounded bg-amber-500/30 text-amber-200 text-[10px] font-black"><?= $ew['late_count'] ?> ocorrências</span>
+                                        </span>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
                     <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-10 gap-4">
                         <div class="flex items-center gap-4 w-full md:w-auto">
                             <div class="relative">
@@ -118,6 +159,9 @@ if ($role !== 'estagiario') {
                         </div>
 
                         <div class="flex items-center gap-6 w-full md:w-auto justify-end">
+                            <button type="button" @click="qrModal = true" class="px-4 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs rounded-xl shadow-lg transition flex items-center gap-2">
+                                <i class="fa-solid fa-qrcode text-sm"></i> Check-in QR Code
+                            </button>
                             <?php if ($role === 'estagiario'): ?>
                                 <button @click="markAttendance('check_in')"
                                     :disabled="loadingAttendance || (todayStatus && todayStatus.check_in)"
@@ -370,7 +414,32 @@ if ($role !== 'estagiario') {
                     </div>
                 </div>
 
-            </main>
+            
+                <!-- Modal QR Code Check-in -->
+                <div x-show="qrModal" x-cloak class="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 p-4 backdrop-blur-md" style="display:none;" x-transition>
+                    <div @click.away="qrModal = false" class="bg-[#101622] rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-800 p-6 text-center">
+                        <div class="flex justify-between items-center pb-3 border-b border-slate-800 mb-4">
+                            <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-qrcode text-cyan-400"></i> Check-in por QR Code
+                            </h3>
+                            <button @click="qrModal = false" class="text-slate-500 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+                        </div>
+                        <p class="text-xs text-slate-400 mb-4">Aproxime a câmara do seu telemóvel para fazer o check-in de entrada ou saída instantâneo.</p>
+                        
+                        <div class="bg-white p-4 rounded-2xl inline-block shadow-xl my-2 border-4 border-cyan-500/30">
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://localhost:8082/presencas.php?action=qr_checkin" alt="QR Code Presença" class="w-44 h-44">
+                        </div>
+                        
+                        <p class="text-[11px] text-cyan-400 font-mono mt-3 font-bold">CÓDIGO: MECK-CHECKIN-<?= date('Ymd') ?></p>
+                        
+                        <div class="mt-6 pt-4 border-t border-slate-800 flex justify-center gap-2">
+                            <button type="button" @click="markAttendance('check_in'); qrModal = false" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-lg transition">
+                                <i class="fa-solid fa-check mr-1"></i> Registar Agora
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                </main>
             <?php include 'components/footer.php'; ?>
         </div>
     </div>
@@ -379,7 +448,7 @@ if ($role !== 'estagiario') {
 
         function attendanceApp() {
             return {
-                sidebarOpen: false, modalOpen: false, filterDate: '<?= date('Y-m-d') ?>',
+                sidebarOpen: false, modalOpen: false, qrModal: false, filterDate: '<?= date('Y-m-d') ?>',
                 searchQuery: '',
                 attendanceRecords: [], todayStatus: null, loadingAttendance: true,
                 pagination: {

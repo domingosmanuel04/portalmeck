@@ -69,7 +69,7 @@ $levelStyle = [
 <div class="flex h-screen overflow-hidden">
     <?php include 'components/sidebar.php'; ?>
     <div class="flex-1 flex flex-col overflow-hidden min-w-0">
-        <header class="flex items-center justify-between px-6 py-4 border-b border-slate-800/80">
+        <header class="relative z-[9999] flex items-center justify-between px-6 py-4 border-b border-slate-800/80">
                 <div class="flex-1 flex justify-between items-center px-2 md:px-4">
                 <div class="flex items-center gap-3">
                     <a href="configuracoes.php" class="btn btn-ghost btn-sm"><i class="fa-solid fa-arrow-left"></i> Voltar</a>

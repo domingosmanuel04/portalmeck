@@ -55,7 +55,7 @@ $currentUser = null;
 <div class="flex h-screen overflow-hidden">
     <?php include 'components/sidebar.php'; ?>
     <div class="flex-1 flex flex-col overflow-hidden min-w-0">
-        <header class="flex items-center justify-between px-6 py-4 border-b border-slate-800/80">
+        <header class="relative z-[9999] flex items-center justify-between px-6 py-4 border-b border-slate-800/80">
             <div class="flex-1 flex justify-between items-center">
                 <h1 class="text-2xl font-semibold text-white">Gravações</h1>
                 <?php include 'components/header_user.php'; ?>

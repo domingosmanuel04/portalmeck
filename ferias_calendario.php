@@ -75,7 +75,7 @@ if ($staffInfo && $staffInfo['employee_type'] === 'estagiario' && $staffInfo['en
         <!-- Main Content -->
         <div class="flex flex-col flex-1 overflow-hidden">
             <!-- Top header -->
-            <header class="flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
+            <header class="relative z-[9999] flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
                 <div class="flex items-center gap-4">
                     <h1 class="text-xl font-bold text-white hidden md:block">O Meu Calendário</h1>
                 </div>
@@ -216,10 +216,14 @@ if ($staffInfo && $staffInfo['employee_type'] === 'estagiario' && $staffInfo['en
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <!-- History Table: Vacations -->
                     <div class="bg-[#101622] rounded-2xl border border-slate-800 overflow-hidden shadow-sm">
-                        <div class="px-6 py-4 border-b border-slate-800 bg-slate-900/50">
+                        <div class="px-6 py-4 border-b border-slate-800 bg-slate-900/50 flex justify-between items-center">
                             <h3 class="font-bold text-white flex items-center gap-2">
                                 <i class="fa-solid fa-clock-rotate-left text-blue-400 text-sm"></i> Histórico de Férias
                             </h3>
+                            <a href="api/calendar_export.php?type=vacation" target="_blank"
+                               class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 text-xs font-semibold rounded-xl border border-cyan-500/20 flex items-center gap-1.5 transition">
+                                <i class="fa-solid fa-calendar-arrow-down"></i> Sincronizar iCal
+                            </a>
                         </div>
                         <div class="p-0">
                             <table class="w-full text-left text-sm">

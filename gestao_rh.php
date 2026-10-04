@@ -153,7 +153,7 @@ $overtimes = $pdo->query("
         <!-- Main Content -->
         <div class="flex flex-col flex-1 overflow-hidden">
             <!-- Top header -->
-            <header class="flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
+            <header class="relative z-[9999] flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
                 <div class="flex items-center gap-4">
                     <h1 class="text-xl font-bold text-white hidden md:block">Gestão de RH</h1>
                 </div>

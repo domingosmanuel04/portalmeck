@@ -136,7 +136,7 @@ try {
         <!-- Content -->
         <div class="flex-1 flex flex-col overflow-hidden">
 
-            <header class="flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
+            <header class="relative z-[9999] flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
                 <div class="flex-1 flex justify-between">
                     <h1 class="text-2xl font-semibold text-white hidden md:block">Gestão de Supervisores</h1>
                     <?php include 'components/header_user.php'; ?>

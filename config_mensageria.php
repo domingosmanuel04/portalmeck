@@ -80,7 +80,7 @@ $cards = [
     <?php include 'components/sidebar.php'; ?>
 
     <div class="flex-1 flex flex-col overflow-hidden min-w-0">
-        <header class="flex items-center justify-between px-6 py-4 border-b border-slate-800/80 bg-[#0b1020]/80 backdrop-blur-md">
+        <header class="relative z-[9999] flex items-center justify-between px-6 py-4 border-b border-slate-800/80 bg-[#0b1020]/80 backdrop-blur-md">
                 <div class="flex-1 flex justify-between items-center px-2 md:px-4">
                 <h1 class="text-2xl font-semibold text-white hidden md:block">Mensageria</h1>
                 <?php include 'components/header_user.php'; ?>

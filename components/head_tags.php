@@ -72,6 +72,16 @@ if (!empty($_SESSION['user_id'])) {
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#22d3ee">
 <script>
+// Apply saved theme immediately on load
+(function() {
+    var savedTheme = localStorage.getItem('meck_theme');
+    if (savedTheme === 'light') {
+        document.documentElement.classList.add('theme-light');
+        document.addEventListener('DOMContentLoaded', function() {
+            document.body.classList.add('theme-light');
+        });
+    }
+})();
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -87,5 +97,31 @@ window.meckPush = function (title, body) {
             new Notification(title, { body: body || '', icon: 'icone.png' });
         }
     } catch (_) {}
+};
+
+// PWA Installation handling
+let meckDeferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    meckDeferredPrompt = e;
+    const btn = document.getElementById('pwaInstallBtn');
+    if (btn) btn.classList.remove('hidden');
+});
+window.installMeckPwa = async function () {
+    if (!meckDeferredPrompt) {
+        if (typeof MeckNotifications !== 'undefined') {
+            MeckNotifications.toast('A aplicação Meck RH já está instalada ou este navegador não suporta PWA nativo.');
+        } else {
+            alert('A aplicação Meck RH já está instalada ou o navegador não suporta PWA.');
+        }
+        return;
+    }
+    meckDeferredPrompt.prompt();
+    const { outcome } = await meckDeferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+        const btn = document.getElementById('pwaInstallBtn');
+        if (btn) btn.classList.add('hidden');
+    }
+    meckDeferredPrompt = null;
 };
 </script>

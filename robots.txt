@@ -1,0 +1,30 @@
+# robots.txt — Meck RH System
+User-agent: *
+Allow: /index.php
+Allow: /vagas.php
+Allow: /suporte.php
+Allow: /css/
+Allow: /js/
+Allow: /sitemap.xml
+Allow: /llms.txt
+
+# Disallow private system files, uploads, and APIs
+Disallow: /api/
+Disallow: /uploads/
+Disallow: /gravacoes/
+Disallow: /backups/
+Disallow: /tmp/
+Disallow: /components/
+Disallow: /admin/
+
+# Disallow LLM scrapers from scraping internal user content
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ChatGPT-User
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+Sitemap: http://localhost:8082/sitemap.xml

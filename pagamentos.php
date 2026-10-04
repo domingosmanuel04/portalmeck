@@ -159,7 +159,7 @@ foreach ($interns as $intern) {
     <div class="flex h-screen overflow-hidden bg-[#101622]">
         <?php include 'components/sidebar.php'; ?>
         <div class="flex-1 flex flex-col overflow-hidden">
-            <header class="flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
+            <header class="relative z-[9999] flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
                 <div class="flex-1 flex justify-between">
                     <h1 class="text-2xl font-semibold text-white hidden md:block">Gestão de Pagamentos</h1>
                     <div class="flex items-center gap-6 ml-auto">
@@ -290,7 +290,7 @@ foreach ($interns as $intern) {
                                             - <?= number_format($p['total_discounts'], 0) ?>
                                         </td>
                                         <td class="px-8 py-5 text-right">
-                                            <p class="font-black text-emerald-400 text-base"><?= number_format($p['final_salary'], 0) ?></p>
+                                            <p class="font-black text-emerald-400 text-base"><?= number_format($p['final_salary'], 0) ?></p> <a href="api/generate_pdf.php?type=recibo&intern_id=<?= $p['intern_id'] ?>" target="_blank" class="ml-2 p-1.5 text-cyan-400 hover:bg-slate-800 rounded-lg inline-flex items-center gap-1 text-xs font-bold" title="Emitir Recibo PDF"><i class="fa-solid fa-file-pdf"></i> Recibo</a>
                                         </td>
                                     </tr>
                                     <?php endforeach; ?>

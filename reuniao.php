@@ -52,7 +52,7 @@ try {
         <?php include 'components/sidebar.php'; ?>
 
         <div class="flex-1 flex flex-col overflow-hidden min-w-0">
-            <header class="flex items-center justify-between px-5 py-4 border-b border-slate-800/80 bg-[#0b1020]/80 backdrop-blur-md">
+            <header class="relative z-[9999] flex items-center justify-between px-5 py-4 border-b border-slate-800/80 bg-[#0b1020]/80 backdrop-blur-md">
                 <div class="flex-1 flex justify-between items-center">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg agent-pulse"
@@ -128,8 +128,14 @@ try {
                                         </div>
                                     </template>
                                     <template x-if="m.my_status !== 'invited' && m.status !== 'ended'">
-                                        <button type="button" @click="openMeeting(m.id).then(() => enterRoom())"
-                                            class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600/80 text-white">Entrar</button>
+                                        <div class="flex items-center gap-2">
+                                            <button type="button" @click="openMeeting(m.id).then(() => enterRoom())"
+                                                class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600/80 text-white">Entrar</button>
+                                            <a :href="'api/calendar_export.php?type=meeting&id=' + m.id" target="_blank"
+                                                class="px-2.5 py-1.5 rounded-lg text-xs bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/20 flex items-center gap-1" title="Sincronizar com iCal / Outlook / Google Calendar">
+                                                <i class="fa-solid fa-calendar-plus"></i> iCal
+                                            </a>
+                                        </div>
                                     </template>
                                     <template x-if="m.status === 'ended'">
                                         <button type="button" @click="openMeeting(m.id)"
@@ -352,7 +358,7 @@ try {
                     <div x-show="reportTab === 'notas'" class="space-y-4">
                         <!-- Resumo -->
                         <section class="rounded-2xl border border-slate-700/70 bg-[#14151c]">
-                            <header class="flex items-center gap-3 px-4 py-3 cursor-pointer" @click="toggleSection('resumo')">
+                            <header class="relative z-[9999] flex items-center gap-3 px-4 py-3 cursor-pointer" @click="toggleSection('resumo')">
                                 <span class="w-8 h-8 rounded-lg bg-violet-600/90 flex items-center justify-center text-white text-sm">
                                     <i class="fa-solid fa-align-left"></i>
                                 </span>
@@ -384,7 +390,7 @@ try {
 
                         <!-- Tarefas -->
                         <section class="rounded-2xl border border-slate-700/70 bg-[#14151c]">
-                            <header class="flex items-center gap-3 px-4 py-3 cursor-pointer" @click="toggleSection('tarefas')">
+                            <header class="relative z-[9999] flex items-center gap-3 px-4 py-3 cursor-pointer" @click="toggleSection('tarefas')">
                                 <span class="w-8 h-8 rounded-lg bg-emerald-600/90 flex items-center justify-center text-white text-sm">
                                     <i class="fa-solid fa-list-check"></i>
                                 </span>
@@ -426,7 +432,7 @@ try {
 
                         <!-- Perguntas-chave -->
                         <section class="rounded-2xl border border-slate-700/70 bg-[#14151c]">
-                            <header class="flex items-center gap-3 px-4 py-3 cursor-pointer" @click="toggleSection('perguntas')">
+                            <header class="relative z-[9999] flex items-center gap-3 px-4 py-3 cursor-pointer" @click="toggleSection('perguntas')">
                                 <span class="w-8 h-8 rounded-lg bg-orange-500/90 flex items-center justify-center text-white text-sm">
                                     <i class="fa-solid fa-comment-dots"></i>
                                 </span>

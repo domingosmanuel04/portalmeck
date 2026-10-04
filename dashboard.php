@@ -221,7 +221,7 @@ try {
         <!-- Main Content -->
         <div class="flex flex-col flex-1 overflow-hidden">
             <!-- Top header -->
-            <header class="flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
+            <header class="relative z-[9999] flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
                 <div class="flex-1 px-4 md:px-0 flex justify-between">
                     <h1 class="text-2xl font-semibold text-white hidden md:block">Visão Geral</h1>
                     <div class="flex items-center gap-6 ml-auto">
@@ -396,8 +396,202 @@ try {
                             </a>
                         </div>
                     </div>
-                </div>
+                    <!-- Kudos & Onboarding Section -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8 mb-6" x-data="{
+                        kudosList: [],
+                        kudosModal: false,
+                        targetUser: '',
+                        badgeType: 'top_performer',
+                        kudosMsg: '',
+                        onboarding: { steps: [], percentage: 0 },
+                        async init() {
+                            this.fetchKudos();
+                            this.fetchOnboarding();
+                        },
+                        async fetchKudos() {
+                            try {
+                                let r = await fetch('api/kudos_api.php?action=list');
+                                let d = await r.json();
+                                if (d.success) this.kudosList = d.kudos || [];
+                            } catch(e) {}
+                        },
+                        async fetchOnboarding() {
+                            try {
+                                let r = await fetch('api/onboarding_api.php');
+                                let d = await r.json();
+                                if (d.success) this.onboarding = d;
+                            } catch(e) {}
+                        },
+                        async toggleStep(stepId, currentStatus) {
+                            try {
+                                await fetch('api/onboarding_api.php', {
+                                    method: 'POST',
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify({ step_id: stepId, completed: !currentStatus })
+                                });
+                                this.fetchOnboarding();
+                            } catch(e) {}
+                        },
+                        async sendKudos() {
+                            if (!this.targetUser || !this.kudosMsg) {
+                                MeckNotifications.error('Erro', 'Preencha o destinatário e a mensagem');
+                                return;
+                            }
+                            try {
+                                let r = await fetch('api/kudos_api.php', {
+                                    method: 'POST',
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify({
+                                        receiver_id: this.targetUser,
+                                        badge_type: this.badgeType,
+                                        message: this.kudosMsg
+                                    })
+                                });
+                                let d = await r.json();
+                                if (d.success) {
+                                    MeckNotifications.success('Sucesso', 'Reconhecimento enviado com sucesso!');
+                                    this.kudosModal = false;
+                                    this.kudosMsg = '';
+                                    this.fetchKudos();
+                                } else {
+                                    MeckNotifications.error('Erro', d.error || 'Falha ao enviar');
+                                }
+                            } catch(e) {
+                                MeckNotifications.error('Erro', 'Erro de ligação');
+                            }
+                        }
+                    }">
+                        <!-- Onboarding Widget -->
+                        <div class="bg-[#101622] rounded-xl shadow-sm border border-slate-800 p-6 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between mb-4">
+                                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                                        <i class="fa-solid fa-graduation-cap text-cyan-400"></i> Checklist de Onboarding
+                                    </h2>
+                                    <span class="px-2.5 py-1 bg-cyan-900/40 text-cyan-300 text-xs font-bold rounded-full border border-cyan-500/30" x-text="onboarding.percentage + '% Concluído'"></span>
+                                </div>
+                                <p class="text-xs text-slate-400 mb-4">Acompanhe e conclua os passos de integração da sua jornada no Meck RH.</p>
+                                
+                                <!-- Progress Bar -->
+                                <div class="w-full bg-slate-800 h-2.5 rounded-full mb-6 overflow-hidden">
+                                    <div class="bg-gradient-to-r from-cyan-400 to-purple-500 h-2.5 transition-all duration-500" :style="'width: ' + onboarding.percentage + '%'"></div>
+                                </div>
 
+                                <div class="space-y-3 max-h-60 overflow-y-auto pr-1">
+                                    <template x-for="step in onboarding.steps" :key="step.id">
+                                        <div @click="toggleStep(step.id, step.completed)" class="p-3 bg-slate-900/60 rounded-xl border border-slate-800 hover:border-slate-700 transition cursor-pointer flex items-start gap-3 group">
+                                            <div class="mt-0.5 shrink-0">
+                                                <i class="fa-solid text-base" :class="step.completed ? 'fa-circle-check text-emerald-400' : 'fa-circle text-slate-600 group-hover:text-cyan-400'"></i>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-xs font-bold text-slate-200" :class="{'line-through text-slate-500': step.completed}" x-text="step.title"></p>
+                                                <p class="text-[11px] text-slate-400 mt-0.5" x-text="step.description"></p>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Kudos / Recognition Feed Widget -->
+                        <div class="lg:col-span-2 bg-[#101622] rounded-xl shadow-sm border border-slate-800 p-6">
+                            <div class="flex justify-between items-center mb-6">
+                                <div>
+                                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                                        <i class="fa-solid fa-award text-amber-400"></i> Mural de Reconhecimento & Kudos
+                                    </h2>
+                                    <p class="text-xs text-slate-400">Reconheça o esforço e dedicação dos seus colegas de equipa.</p>
+                                </div>
+                                <button type="button" @click="kudosModal = true" class="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-bold text-xs rounded-xl shadow-lg transition flex items-center gap-2">
+                                    <i class="fa-solid fa-trophy"></i> Reconhecer Colega
+                                </button>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-72 overflow-y-auto pr-1">
+                                <template x-for="k in kudosList" :key="k.id">
+                                    <div class="p-4 bg-slate-900/80 rounded-xl border border-slate-800/80 hover:border-slate-700 transition flex gap-3 items-start">
+                                        <div class="shrink-0">
+                                            <div class="w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-lg border border-amber-500/30">
+                                                <i class="fa-solid" :class="{
+                                                    'fa-trophy': k.badge_type === 'top_performer',
+                                                    'fa-clock': k.badge_type === 'punctual_star',
+                                                    'fa-handshake': k.badge_type === 'team_player',
+                                                    'fa-lightbulb': k.badge_type === 'innovation',
+                                                    'fa-star': k.badge_type === 'leadership'
+                                                }"></i>
+                                            </div>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex justify-between items-center">
+                                                <p class="text-xs font-bold text-white truncate" x-text="k.receiver_name"></p>
+                                                <span class="text-[10px] text-slate-500 uppercase font-semibold" x-text="new Date(k.created_at).toLocaleDateString()"></span>
+                                            </div>
+                                            <p class="text-[11px] text-amber-300 font-semibold mt-0.5" x-text="
+                                                k.badge_type === 'top_performer' ? '🏆 Top Performer' :
+                                                (k.badge_type === 'punctual_star' ? '⏱️ 100% Pontualidade' :
+                                                (k.badge_type === 'team_player' ? '🤝 Espírito de Equipa' :
+                                                (k.badge_type === 'innovation' ? '💡 Inovação & Ideias' : '🌟 Liderança')))
+                                            "></p>
+                                            <p class="text-xs text-slate-300 italic mt-1 bg-slate-800/60 p-2 rounded-lg" x-text="'“' + k.message + '”'"></p>
+                                            <p class="text-[10px] text-slate-500 mt-1">Por <span class="text-slate-400 font-semibold" x-text="k.sender_name"></span></p>
+                                        </div>
+                                    </div>
+                                </template>
+                                <template x-if="kudosList.length === 0">
+                                    <div class="col-span-2 text-center py-10 text-slate-500">
+                                        <i class="fa-solid fa-award text-3xl mb-2 block text-slate-600"></i>
+                                        <p class="text-sm">Nenhum reconhecimento atribuído ainda. Seja o primeiro!</p>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <!-- Send Kudos Modal -->
+                            <div x-show="kudosModal" x-cloak class="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" style="display:none;" x-transition>
+                                <div @click.away="kudosModal = false" class="bg-[#101622] border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md p-6">
+                                    <div class="flex justify-between items-center pb-4 border-b border-slate-800 mb-4">
+                                        <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                            <i class="fa-solid fa-trophy text-amber-400"></i> Atribuir Badge / Kudos
+                                        </h3>
+                                        <button @click="kudosModal = false" class="text-slate-500 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+                                    </div>
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-400 mb-1">Selecionar Colaborador</label>
+                                            <select x-model="targetUser" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-xs outline-none">
+                                                <option value="">-- Selecione o colaborador --</option>
+                                                <?php
+                                                    $usersForKudos = $pdo->query("SELECT id, name, role FROM users ORDER BY name ASC")->fetchAll();
+                                                    foreach ($usersForKudos as $u):
+                                                ?>
+                                                    <option value="<?= $u['id'] ?>"><?= htmlspecialchars($u['name']) ?> (<?= htmlspecialchars($u['role']) ?>)</option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-400 mb-1">Tipo de Insígnia / Badge</label>
+                                            <select x-model="badgeType" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-xs outline-none">
+                                                <option value="top_performer">🏆 Top Performer do Mês</option>
+                                                <option value="punctual_star">⏱️ 100% Assiduidade & Pontualidade</option>
+                                                <option value="team_player">🤝 Excelente Espírito de Equipa</option>
+                                                <option value="innovation">💡 Inovação & Ideias Criativas</option>
+                                                <option value="leadership">🌟 Liderança & Proatividade</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-400 mb-1">Mensagem de Reconhecimento</label>
+                                            <textarea x-model="kudosMsg" rows="3" placeholder="Escreva uma mensagem de incentivo ou elogio..." class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-xs outline-none"></textarea>
+                                        </div>
+                                        <div class="flex justify-end gap-2 pt-2">
+                                            <button type="button" @click="kudosModal = false" class="px-4 py-2 bg-slate-800 text-slate-300 text-xs font-bold rounded-xl">Cancelar</button>
+                                            <button type="button" @click="sendKudos()" class="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-white text-xs font-bold rounded-xl shadow-lg">Enviar Kudos</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
 
             </main>
             <?php include 'components/footer.php'; ?>
@@ -480,7 +674,7 @@ try {
                     {
                         element: document.querySelector('#sidebar-nav'),
                         title: 'Navegação',
-                        intro: 'Aceda a Funcionários, Atividades, Relatórios, Chat, Reunião, Gravações e MeckLittle.',
+                        intro: 'Aceda a Funcionários, Atividades, Relatórios, Chat, Reunião e Gravações.',
                         position: 'right'
                     },
                     {

@@ -165,7 +165,7 @@ $activitiesJson = json_encode(array_values($activities));
         <!-- Content -->
         <div class="flex-1 flex flex-col overflow-hidden">
 
-            <header class="flex items-center justify-between px-6 py-8 bg-[#101622] border-b border-slate-800">
+            <header class="relative z-[9999] flex items-center justify-between px-6 py-8 bg-[#101622] border-b border-slate-800">
                 <div class="flex-1 flex justify-between items-center">
                     <h1 class="text-2xl font-semibold text-white hidden md:block">Quadro de Atividades</h1>
                     <div class="flex items-center gap-4 ml-auto">

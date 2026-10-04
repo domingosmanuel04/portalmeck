@@ -82,7 +82,7 @@ $isExpiring = $document['valid_until'] && strtotime($document['valid_until']) < 
     <div class="flex h-screen overflow-hidden bg-[#101622]">
         <?php include 'components/sidebar.php'; ?>
         <div class="flex-1 flex flex-col overflow-hidden">
-            <header class="flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
+            <header class="relative z-[9999] flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
                 <div class="flex-1 flex justify-between">
                     <h1 class="text-2xl font-semibold text-white hidden md:block">Detalhes do Documento</h1>
                     <div class="flex items-center gap-6 ml-auto">

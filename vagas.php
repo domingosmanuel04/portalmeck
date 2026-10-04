@@ -79,7 +79,7 @@ $departments = $pdo->query("SELECT name FROM departments ORDER BY name ASC")->fe
 
         <!-- Content -->
         <div class="flex-1 flex flex-col overflow-hidden">
-            <header class="flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
+            <header class="relative z-[9999] flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
                 <div class="flex items-center gap-4">
                     <h1 class="text-xl font-bold text-white">Vagas e Recrutamento</h1>
                 </div>

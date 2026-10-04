@@ -23,9 +23,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? 'unknown';
     $ip = explode(',', (string) $ip)[0];
     $ip = trim($ip);
-    if (!meckRateLimit('login_' . md5($ip), 10, 600)) {
+
+    // 1. Verificação de Bloqueio por Força Bruta por IP (Máximo 5 tentativas falhadas em 15min)
+    $ipCheck = meckCheckIpLoginAttempts($ip);
+    if ($ipCheck['blocked']) {
         http_response_code(429);
-        echo json_encode(['success' => false, 'error' => 'Demasiadas tentativas. Aguarde alguns minutos.']);
+        echo json_encode(['success' => false, 'error' => $ipCheck['message']]);
+        exit;
+    }
+
+    if (!meckRateLimit('login_' . md5($ip), 15, 600)) {
+        http_response_code(429);
+        echo json_encode(['success' => false, 'error' => 'Demasiadas tentativas de ligação. Aguarde alguns minutos.']);
         exit;
     }
 
@@ -44,10 +53,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ok = password_verify($password, $hash);
 
         if (!$user || !$ok) {
+            $failedRec = meckRecordFailedLoginAttempt($ip);
             usleep(random_int(100000, 300000));
-            echo json_encode(['success' => false, 'error' => 'Credenciais inválidas! Tente novamente.']);
+            if ($failedRec['is_now_blocked']) {
+                try {
+                    require_once __DIR__ . '/audit_helper.php';
+                    auditLog($pdo, 'auth.ip_blocked', 'security', null, ['ip' => $ip, 'reason' => '5_failed_logins'], $user['id'] ?? null);
+                } catch (Throwable $e) {}
+                http_response_code(429);
+                echo json_encode(['success' => false, 'error' => 'Atingiu o limite de 5 tentativas falhadas. O seu IP foi bloqueado por 15 minutos por razões de segurança.']);
+            } else {
+                $rem = $failedRec['remaining_attempts'];
+                echo json_encode(['success' => false, 'error' => "Credenciais inválidas! Restam $rem tentativa(s) antes do bloqueio por segurança."]);
+            }
             exit;
         }
+
+        // Sucesso: limpar histórico de falhas do IP
+        meckClearFailedLoginAttempts($ip);
 
         session_regenerate_id(true);
         $_SESSION['user_id'] = $user['id'];

@@ -73,7 +73,7 @@ try {
         <?php include 'components/sidebar.php'; ?>
 
         <div class="flex-1 flex flex-col overflow-hidden min-w-0">
-            <header class="flex items-center justify-between px-5 py-4 border-b border-slate-800/80 bg-[#0b1020]/80 backdrop-blur-md">
+            <header class="relative z-[9999] flex items-center justify-between px-5 py-4 border-b border-slate-800/80 bg-[#0b1020]/80 backdrop-blur-md">
                 <div class="flex-1 flex justify-between items-center">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg"

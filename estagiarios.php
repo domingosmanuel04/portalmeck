@@ -253,7 +253,7 @@ try {
         <!-- Content -->
         <div class="flex-1 flex flex-col overflow-hidden">
 
-            <header class="flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
+            <header class="relative z-[9999] flex items-center justify-between px-6 py-4 bg-[#101622] border-b border-slate-800">
                 <div class="flex-1 flex justify-between">
                     <h1 class="text-2xl font-semibold text-white hidden md:block">Gestão de Funcionários</h1>
                     <div class="flex items-center gap-6 ml-auto">
@@ -366,6 +366,7 @@ try {
                                                 title="Enviar Mensagem">
                                                 <i class="fa-solid fa-comment"></i>
                                             </button>
+                                            <a href="api/generate_pdf.php?type=declaration&intern_id=<?= $intern['intern_id'] ?>" target="_blank" class="p-2 text-emerald-400 hover:bg-emerald-900/20 rounded-lg transition-colors" title="Emitir Declaração PDF"><i class="fa-solid fa-file-pdf"></i></a>
                                             <?php if ($role === 'admin'): ?>
                                                 <button @click="editIntern(<?= $intern['intern_id'] ?>)"
                                                     class="p-2 text-amber-400 hover:bg-slate-800 rounded-lg transition-colors">

@@ -490,3 +490,113 @@ function meckFileUrl(?string $relPath, bool $download = false): string
     }
     return $url;
 }
+
+/**
+ * Verifica e faz a gestão de bloqueio de IP por tentativas falhadas de login.
+ * Bloqueia o IP após 5 tentativas falhadas dentro de uma janela de 15 minutos (900s).
+ */
+function meckCheckIpLoginAttempts(string $ip): array
+{
+    $dir = dirname(__DIR__) . '/tmp';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+    }
+    $safeIp = preg_replace('/[^a-zA-Z0-9._-]/', '_', $ip);
+    $file = $dir . '/bruteforce_' . $safeIp . '.json';
+    $now = time();
+    $windowSeconds = 900; // 15 minutos
+    $maxFailed = 5; // 5 tentativas falhadas
+
+    $data = ['failed_attempts' => [], 'blocked_until' => 0];
+
+    if (is_file($file)) {
+        $raw = @file_get_contents($file);
+        $decoded = $raw ? json_decode($raw, true) : null;
+        if (is_array($decoded)) {
+            $data = array_merge($data, $decoded);
+        }
+    }
+
+    // Se estiver atualmente bloqueado
+    if ($data['blocked_until'] > $now) {
+        $remaining = ceil(($data['blocked_until'] - $now) / 60);
+        return [
+            'blocked' => true,
+            'remaining_minutes' => (int)$remaining,
+            'message' => "O seu endereço IP foi temporariamente bloqueado devido a 5 tentativas falhadas de login por razões de segurança. Tente novamente em {$remaining} minuto(s)."
+        ];
+    }
+
+    // Filtrar tentativas fora da janela de 15 min
+    $data['failed_attempts'] = array_values(array_filter(
+        $data['failed_attempts'],
+        static fn($t) => is_int($t) && ($now - $t) < $windowSeconds
+    ));
+
+    return [
+        'blocked' => false,
+        'failed_count' => count($data['failed_attempts']),
+        'remaining_attempts' => max(0, $maxFailed - count($data['failed_attempts']))
+    ];
+}
+
+/**
+ * Regista uma tentativa falhada de login para um IP.
+ */
+function meckRecordFailedLoginAttempt(string $ip): array
+{
+    $dir = dirname(__DIR__) . '/tmp';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+    }
+    $safeIp = preg_replace('/[^a-zA-Z0-9._-]/', '_', $ip);
+    $file = $dir . '/bruteforce_' . $safeIp . '.json';
+    $now = time();
+    $windowSeconds = 900; // 15 min
+    $blockSeconds = 900;  // 15 min de bloqueio
+    $maxFailed = 5;
+
+    $data = ['failed_attempts' => [], 'blocked_until' => 0];
+    if (is_file($file)) {
+        $raw = @file_get_contents($file);
+        $decoded = $raw ? json_decode($raw, true) : null;
+        if (is_array($decoded)) {
+            $data = array_merge($data, $decoded);
+        }
+    }
+
+    // Limpar antigas
+    $data['failed_attempts'] = array_values(array_filter(
+        $data['failed_attempts'],
+        static fn($t) => is_int($t) && ($now - $t) < $windowSeconds
+    ));
+
+    $data['failed_attempts'][] = $now;
+    $count = count($data['failed_attempts']);
+
+    if ($count >= $maxFailed) {
+        $data['blocked_until'] = $now + $blockSeconds;
+    }
+
+    @file_put_contents($file, json_encode($data), LOCK_EX);
+
+    return [
+        'failed_count' => $count,
+        'is_now_blocked' => ($count >= $maxFailed),
+        'remaining_attempts' => max(0, $maxFailed - $count)
+    ];
+}
+
+/**
+ * Reseta o contador de tentativas falhadas para um IP (após login com sucesso).
+ */
+function meckClearFailedLoginAttempts(string $ip): void
+{
+    $dir = dirname(__DIR__) . '/tmp';
+    $safeIp = preg_replace('/[^a-zA-Z0-9._-]/', '_', $ip);
+    $file = $dir . '/bruteforce_' . $safeIp . '.json';
+    if (is_file($file)) {
+        @unlink($file);
+    }
+}
+

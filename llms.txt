@@ -1,0 +1,24 @@
+# Meck RH — Sistema Integrado de Gestão de Recursos Humanos e Estagiários
+
+> Meck RH é uma plataforma empresarial completa concebida para gestão de colaboradores, presenças, avaliações de desempenho 360°, bolsas, subsídios, tarefas e comunicação em tempo real via WebRTC.
+
+## Descrição do Sistema
+
+O Meck RH oferece controlo completo sobre o ciclo de vida dos estagiários e funcionários, desde o processo de onboarding, assiduidade diária com QR Code, atribuição de atividades, avaliações mensais de competências e emanação automática de relatórios e declarações em PDF.
+
+## Módulos Principais
+
+- [Página Inicial & Autenticação](http://localhost:8082/index.php): Autenticação segura com proteção contra ataques de força bruta.
+- [Dashboard Geral](http://localhost:8082/dashboard.php): Resumo de indicadores de desempenho, presenças, tarefas e mural de reconhecimentos (Kudos).
+- [Gestão de Funcionários](http://localhost:8082/estagiarios.php): Cadastro e ficha detalhada de colaboradores e supervisores.
+- [Controlo de Presenças](http://localhost:8082/presencas.php): Registo diário de pontualidade e check-in inteligente via QR Code.
+- [Atividades & Tarefas](http://localhost:8082/atividades.php): Atribuição e monitorização do progresso de tarefas.
+- [Avaliações de Desempenho 360°](http://localhost:8082/avaliacoes.php): Pontuação mensal por critérios de produtividade, liderança e técnica.
+- [Processamento de Pagamentos](http://localhost:8082/pagamentos.php): Gestão de bolsas de estágio e recibos de vencimento.
+- [Vagas & Candidaturas](http://localhost:8082/vagas.php): Portal interno e público para oportunidades de recrutamento.
+
+## Segurança e Conformidade
+
+- **Proteção Anti-Hacker:** Bloqueio automático de endereço IP após 5 tentativas falhadas de autenticação por um período de segurança de 15 minutos.
+- **Proteção CSRF & XSS:** Proteção ativa com tokens CSRF duplo-submit e higienização estrita de entradas.
+- **Privacidade de Dados:** Restrição de acesso aos ficheiros e documentos restrita ao papel do utilizador (RBAC).

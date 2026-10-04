@@ -210,7 +210,7 @@ if ($role !== 'estagiario') {
         <!-- Content -->
         <div class="flex-1 flex flex-col overflow-hidden">
 
-            <header class="flex items-center justify-between px-6 py-8 bg-[#101622] border-b border-slate-800">
+            <header class="relative z-[9999] flex items-center justify-between px-6 py-8 bg-[#101622] border-b border-slate-800">
                 <div class="flex-1 flex justify-between">
                     <h1 class="text-2xl font-semibold text-white hidden md:block">Avaliação de Desempenho</h1>
                     <div class="flex items-center gap-6 ml-auto">
@@ -382,6 +382,7 @@ if ($role !== 'estagiario') {
                                 </div>
                             </div>
                             <div class="mt-6 pt-4 border-t border-slate-800 flex justify-end gap-2">
+                                <a href="api/generate_pdf.php?type=avaliacao&eval_id=<?= $e['id'] ?>" target="_blank" class="mr-3 text-emerald-400 hover:text-emerald-300 text-xs font-bold uppercase tracking-wider flex items-center gap-1 transition-colors"><i class="fa-solid fa-file-pdf"></i> Ficha PDF</a>
                                 <a href="avaliacao_detalhe.php?id=<?= $e['id'] ?>"
                                     class="text-blue-500 hover:text-blue-400 text-xs font-bold uppercase tracking-wider flex items-center gap-1 transition-colors">
                                     Ver Detalhes <i class="fa-solid fa-chevron-right text-[10px]"></i>

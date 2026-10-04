@@ -129,10 +129,6 @@ function isActive($file, $currentFile)
         <a href="gravacoes.php" class="<?= isActive('gravacoes.php', $currentFile) ?>">
             <i class="fa-solid fa-circle-play w-5 text-center"></i> <span>Gravações</span>
         </a>
-        <a href="mecklittle.php" class="<?= isActive('mecklittle.php', $currentFile) ?>">
-            <img src="ia.png" alt="MeckLittle" class="w-5 h-5 rounded-full object-cover object-top ring-1 ring-cyan-400/40 shrink-0">
-            <span>MeckLittle</span>
-        </a>
 
         <?php if (in_array($role, ['admin', 'rh'], true)): ?>
             <a href="pagamentos.php" class="<?= isActive('pagamentos.php', $currentFile) ?>">
@@ -161,6 +157,13 @@ function isActive($file, $currentFile)
                 <i class="fa-solid fa-circle-question w-5 text-center"></i> <span>Suporte</span>
             </a>
         <?php endif; ?>
+
+        <div class="mt-4 pt-4 border-t border-slate-800/80 space-y-2">
+            <!-- PWA Install Button -->
+            <button type="button" id="pwaInstallBtn" onclick="window.installMeckPwa && window.installMeckPwa()" class="hidden w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-gradient-to-r from-cyan-500/20 to-purple-500/20 hover:from-cyan-500/30 hover:to-purple-500/30 text-cyan-300 rounded-xl text-xs font-bold border border-cyan-500/30 transition shadow-sm">
+                <i class="fa-solid fa-mobile-screen-button"></i> <span>Instalar App Meck</span>
+            </button>
+        </div>
     </nav>
 </aside>
 
